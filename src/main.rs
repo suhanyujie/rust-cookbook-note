@@ -3,6 +3,13 @@ mod algorithm;
 use algorithm::*;
 
 fn main() {
-    let n1 = gen_a_u8_num();
-    println!("Rand num of u8 is:{}", n1);
+    test();
+    for i in 0..1000000 {
+        let n1 = mt_rand(0, 100);
+        if n1 == 0 {
+            println!("Rand num is:{}, times is: {}", n1, i);
+            break;
+        }
+        println!("Rand num is:{}", n1);
+    }
 }
