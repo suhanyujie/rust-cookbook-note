@@ -3,5 +3,8 @@
 
 很不幸的，当我决定从众多 tab 中选一个来进行“消化”时，我找到了这个 [Rust cookbook](https://rust-lang-nursery.github.io/rust-cookbook)，它包含了 算法、命令行、数据压缩、并发、数据加密、日期和时间、编解码、错误处理、文件系统、硬件支持、内存管理、网络、操作系统、统计学、文本处理、web 服务等章节，当你学习了[《Rust 编程语言》](https://kaisery.github.io/trpl-zh-cn/)一书后，可以从更加实用的角度来学习这本 [cookbook](https://rust-lang-nursery.github.io/rust-cookbook)
 
+## index
+* 1.[学习 Rust cookbook 之算法篇（algorithm）](https://www.jianshu.com/p/03f1e66062dd)
+
 ## 参考资料
 * cookbook 查阅 https://rust-lang-nursery.github.io/rust-cookbook
