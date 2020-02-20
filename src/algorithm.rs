@@ -1,7 +1,7 @@
 extern crate rand;
 
 use rand::Rng;
-use rand::distributions::{Distribution, Uniform};
+use rand::distributions::{Distribution, Uniform, Standard};
 
 /// 测试函数
 pub fn test() {
@@ -45,5 +45,28 @@ pub fn mt_rand(min: isize, max: isize) ->isize {
     let die = Uniform::from(min..max);
     let num = die.sample(&mut rng);
     num as isize
+}
+
+// 声明一个类型，获取其子成员值是随机的该类型值
+#[derive(Debug)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+impl Distribution<Point> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Point {
+        let (rand_x, rand_y) = rng.gen();
+        Point{
+            x: rand_x,
+            y: rand_y,
+        }
+    }
+}
+
+pub fn test_point() {
+    let mut rng = rand::thread_rng();
+    let rand_point: Point = rng.gen();
+    println!("random point is: {:#?}", rand_point);
 }
 

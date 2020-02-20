@@ -8,3 +8,4 @@
 
 ## 参考资料
 * cookbook 查阅 https://rust-lang-nursery.github.io/rust-cookbook
+* cookbook 中文 http://llever.com/rust-cookbook-zh
