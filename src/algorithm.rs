@@ -1,7 +1,7 @@
 extern crate rand;
 
 use rand::Rng;
-use rand::distributions::{Distribution, Uniform, Standard};
+use rand::distributions::{Distribution, Uniform, Standard, Alphanumeric};
 
 /// 测试函数
 pub fn test() {
@@ -68,5 +68,23 @@ pub fn test_point() {
     let mut rng = rand::thread_rng();
     let rand_point: Point = rng.gen();
     println!("random point is: {:#?}", rand_point);
+}
+
+/// 从字符串中获取随机密码
+pub fn get_random_string(length: u8) ->String {
+    let mut rng = rand::thread_rng();
+    let rand_str: String = rng.sample_iter(&Alphanumeric)
+                .take(length as usize)
+                .collect();
+
+    return rand_str;
+}
+
+#[test]
+fn test_get_random_string() {
+    let len = 3;
+    let s1 = get_random_string(3);
+    println!("random string is:{}", s1);
+    assert_eq!(s1.len(), len);
 }
 
