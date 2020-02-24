@@ -70,7 +70,7 @@ pub fn test_point() {
     println!("random point is: {:#?}", rand_point);
 }
 
-/// 从字符串中获取随机密码
+/// 从ASCII字符串中获取随机密码
 pub fn get_random_string(length: u8) ->String {
     let mut rng = rand::thread_rng();
     let rand_str: String = rng.sample_iter(&Alphanumeric)
@@ -82,9 +82,32 @@ pub fn get_random_string(length: u8) ->String {
 
 #[test]
 fn test_get_random_string() {
-    let len = 3;
-    let s1 = get_random_string(3);
+    let len: u8 = 3;
+    let s1 = get_random_string(len);
     println!("random string is:{}", s1);
-    assert_eq!(s1.len(), len);
+    assert_eq!(s1.len(), len as usize);
+}
+
+/// 从给定字符串中获取随机字符串
+pub fn get_random_string_from_customer_str(length: u8) -> String {
+    let mut rng = rand::thread_rng();
+    let customer_str: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+                                abcdefghijklmnopqrstuvwxyz\
+                                0123456789)(*&^%$#@!~";
+    let rand_str: String = (0..length)
+            .map(|_| {
+                let idx = rng.gen_range(0, customer_str.len());
+                customer_str[idx] as char
+            })
+            .collect();
+    rand_str
+}
+
+#[test]
+fn test_get_random_string_from_customer_str() {
+    let len: u8 = 12;
+    let s1 = get_random_string_from_customer_str(len);
+    println!("random string is:{}", s1);
+    assert_eq!(s1.len(), 1);
 }
 
