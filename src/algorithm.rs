@@ -108,6 +108,6 @@ fn test_get_random_string_from_customer_str() {
     let len: u8 = 12;
     let s1 = get_random_string_from_customer_str(len);
     println!("random string is:{}", s1);
-    assert_eq!(s1.len(), 1);
+    assert_eq!(s1.len(), len as usize);
 }
 
