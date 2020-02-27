@@ -1,8 +1,15 @@
 mod algorithm;
+mod notes;
 
+use std::process;
 use algorithm::*;
+use notes::copy_trait;
 
 fn main() {
+    copy_trait::no_copy();
+    copy_trait::has_copy();
+    process::exit(-1);
+
     test();
     test_point();
     for i in 0..1000000 {
