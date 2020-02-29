@@ -6,6 +6,8 @@ use algorithm::*;
 use notes::copy_trait;
 
 fn main() {
+    copy_trait::sort_for_struct();
+    copy_trait::test_func();
     copy_trait::no_copy();
     copy_trait::has_copy();
     process::exit(-1);
