@@ -5,12 +5,32 @@ use rand::distributions::{Distribution, Uniform, Standard, Alphanumeric};
 
 /// 测试函数
 pub fn test() {
-    let a1 = if true {
-        1
-    } else {
-        2
-    };
-    println!("the num is:{}", a1);
+    let mut a1 = vec![21,32,121, 90, 98, 67, 43];
+    a1.sort();
+    println!("the num is:{:?}", a1);
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_int_sort() {
+        test();
+        assert!(false);
+    }
+
+    #[test]
+    fn test_float_sort() {
+        // 浮点数错误的排序方式：
+        // let mut f1 = vec![21.0, 9.8, 21.5, 9.08, 72.1, 26.9];
+        // f1.sort();
+        // println!("{:?}", f1);
+        let mut f1 = vec![21.0, 9.8, 21.5, 9.08, 72.1, 26.9];
+        f1.sort_by(|a, b| {
+            a.partial_cmp(b).unwrap()
+        });
+        println!("{:?}", f1);
+        assert!(true);
+    }
 }
 
 /// 生成一个 `u8` 类型的随机数
@@ -110,4 +130,6 @@ fn test_get_random_string_from_customer_str() {
     println!("random string is:{}", s1);
     assert_eq!(s1.len(), len as usize);
 }
+
+
 
