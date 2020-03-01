@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 
 pub fn test_func() {
     let content: Box<String> = Box::new(String::from("this is content"));
@@ -48,12 +49,30 @@ pub fn has_copy() {
     println!("{:?}", v2);
 }
 
-#[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Eq, PartialOrd, Ord, PartialEq)]
 struct StuResult {
     name: String,
-    age: u8,
     score: u16,
+    age: u8,
 }
+
+// impl PartialOrd for StuResult {
+//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+//         Some(self.cmp(other))
+//     }
+// }
+
+// impl Ord for StuResult {
+//     fn cmp(&self, other: &Self) -> Ordering {
+//         self.age.cmp(&other.age)
+//     }
+// }
+
+// impl PartialEq for StuResult {
+//     fn eq(&self, other: &Self)->bool {
+//         self.age == other.age
+//     }
+// }
 
 /// struct sort
 pub fn sort_for_struct() {
@@ -75,6 +94,26 @@ pub fn sort_for_struct() {
     let mut stus: Vec<StuResult> = vec!(stu1, stu2, stu3);
     println!("{:#?}", stus);
     stus.sort();
+    println!("{:#?}", stus);
+    // 尝试按照 age 排序
+    let stu1 = StuResult {
+        name: "Wali".to_string(),
+        score: 0,
+        age: 22,
+    };
+    let stu3 = StuResult {
+        name: "Villian".to_string(),
+        score: 0,
+        age: 21,
+    };
+    let stu2 = StuResult {
+        name: "Unita".to_string(),
+        score: 0,
+        age: 23,
+    };
+    let mut stus: Vec<StuResult> = vec!(stu1, stu2, stu3);
+    stus.sort();
+    stus.sort_by(|a, b| a.age.cmp(&b.age));
     println!("{:#?}", stus);
 }
 
