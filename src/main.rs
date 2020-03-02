@@ -1,11 +1,14 @@
 mod algorithm;
 mod notes;
+mod command;
 
-use std::process;
 use algorithm::*;
 use notes::copy_trait;
+use std::process;
 
 fn main() {
+    command::try_with_version();
+
     copy_trait::sort_for_struct();
     copy_trait::test_func();
     copy_trait::no_copy();
