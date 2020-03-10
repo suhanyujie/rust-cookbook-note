@@ -7,7 +7,9 @@ use notes::copy_trait;
 use std::process;
 
 fn main() {
-    command::try_with_version();
+    // 命令行测试
+    command::try_with_test_param();
+    process::exit(-1);
 
     copy_trait::sort_for_struct();
     copy_trait::test_func();
