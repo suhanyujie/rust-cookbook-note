@@ -13,7 +13,10 @@ struct Point {
 }
 
 pub fn no_copy() {
-    let v1 = Point {x_value: 1, y_value: 2};
+    let v1 = Point {
+        x_value: 1,
+        y_value: 2,
+    };
     let v2 = v1;
     // println!("{:?}", v1);
 }
@@ -24,11 +27,9 @@ struct Point2 {
     y_value: i32,
 }
 
-impl Copy for Point2 {
-   
-}
+impl Copy for Point2 {}
 
-impl Clone for Point2{
+impl Clone for Point2 {
     fn clone(&self) -> Point2 {
         Point2 {
             x_value: self.x_value,
@@ -91,7 +92,7 @@ pub fn sort_for_struct() {
         age: 23,
         score: 87,
     };
-    let mut stus: Vec<StuResult> = vec!(stu1, stu2, stu3);
+    let mut stus: Vec<StuResult> = vec![stu1, stu2, stu3];
     println!("{:#?}", stus);
     stus.sort();
     println!("{:#?}", stus);
@@ -111,10 +112,8 @@ pub fn sort_for_struct() {
         score: 0,
         age: 23,
     };
-    let mut stus: Vec<StuResult> = vec!(stu1, stu2, stu3);
+    let mut stus: Vec<StuResult> = vec![stu1, stu2, stu3];
     stus.sort();
     stus.sort_by(|a, b| a.age.cmp(&b.age));
     println!("{:#?}", stus);
 }
-
-

@@ -1,12 +1,16 @@
 mod algorithm;
-mod notes;
 mod command;
+mod notes;
 
 use algorithm::*;
+use notes::alpha;
 use notes::copy_trait;
 use std::process;
 
 fn main() {
+    // alpha::run();
+    // process::exit(-1);
+
     // 命令行测试
     command::try_with_test_param();
     process::exit(-1);

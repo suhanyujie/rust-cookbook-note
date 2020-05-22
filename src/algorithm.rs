@@ -1,11 +1,11 @@
 extern crate rand;
 
+use rand::distributions::{Alphanumeric, Distribution, Standard, Uniform};
 use rand::Rng;
-use rand::distributions::{Distribution, Uniform, Standard, Alphanumeric};
 
 /// 测试函数
 pub fn test() {
-    let mut a1 = vec![21,32,121, 90, 98, 67, 43];
+    let mut a1 = vec![21, 32, 121, 90, 98, 67, 43];
     a1.sort();
     println!("the num is:{:?}", a1);
 }
@@ -25,9 +25,7 @@ mod tests {
         // f1.sort();
         // println!("{:?}", f1);
         let mut f1 = vec![21.0, 9.8, 21.5, 9.08, 72.1, 26.9];
-        f1.sort_by(|a, b| {
-            a.partial_cmp(b).unwrap()
-        });
+        f1.sort_by(|a, b| a.partial_cmp(b).unwrap());
         println!("{:?}", f1);
         assert!(true);
     }
@@ -60,7 +58,7 @@ pub fn gen_random_within_range(min: isize, max: isize) -> isize {
 
 /// 用更好的方式生成指定范围内的随机数
 /// 调用示例 `let n1 = mt_rand(0, 100);`
-pub fn mt_rand(min: isize, max: isize) ->isize {
+pub fn mt_rand(min: isize, max: isize) -> isize {
     let mut rng = rand::thread_rng();
     let die = Uniform::from(min..max);
     let num = die.sample(&mut rng);
@@ -77,7 +75,7 @@ struct Point {
 impl Distribution<Point> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Point {
         let (rand_x, rand_y) = rng.gen();
-        Point{
+        Point {
             x: rand_x,
             y: rand_y,
         }
@@ -91,11 +89,12 @@ pub fn test_point() {
 }
 
 /// 从ASCII字符串中获取随机密码
-pub fn get_random_string(length: u8) ->String {
+pub fn get_random_string(length: u8) -> String {
     let mut rng = rand::thread_rng();
-    let rand_str: String = rng.sample_iter(&Alphanumeric)
-                .take(length as usize)
-                .collect();
+    let rand_str: String = rng
+        .sample_iter(&Alphanumeric)
+        .take(length as usize)
+        .collect();
 
     return rand_str;
 }
@@ -115,11 +114,11 @@ pub fn get_random_string_from_customer_str(length: u8) -> String {
                                 abcdefghijklmnopqrstuvwxyz\
                                 0123456789)(*&^%$#@!~";
     let rand_str: String = (0..length)
-            .map(|_| {
-                let idx = rng.gen_range(0, customer_str.len());
-                customer_str[idx] as char
-            })
-            .collect();
+        .map(|_| {
+            let idx = rng.gen_range(0, customer_str.len());
+            customer_str[idx] as char
+        })
+        .collect();
     rand_str
 }
 
@@ -130,6 +129,3 @@ fn test_get_random_string_from_customer_str() {
     println!("random string is:{}", s1);
     assert_eq!(s1.len(), len as usize);
 }
-
-
-
