@@ -8,6 +8,14 @@
 * 2.[学习 Rust cookbook 之算法篇（algorithm）第二部分](docs/2.algorithm.md)
 * 3.[学习 Rust cookbook 之命令行（command）](docs/3.command.md)
 
+### other
+* [Rust Copy trait](docs/notes/1.about-copy-trait.md)
+
+## Usage
+### test
+* 项目目录下运行 `cargo t` 可以运行所有的测试用例
+* 如果只想运行某个文件下的某个测试用例，可以参考 `cargo t -- notes::op_rhs::tests::test_point_add`
+
 ## 参考资料
 * cookbook 查阅 https://rust-lang-nursery.github.io/rust-cookbook
 * cookbook 中文 http://llever.com/rust-cookbook-zh
