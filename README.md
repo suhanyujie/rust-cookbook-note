@@ -10,6 +10,7 @@
 
 ### other
 * [Rust Copy trait](docs/notes/1.about-copy-trait.md)
+* [Rust 运算符重载](docs/notes/2.op_rhs.md)
 
 ## Usage
 ### test
