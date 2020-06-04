@@ -1,8 +1,10 @@
 extern crate clap;
+extern crate ansi_term;
 
 use clap::{App, Arg};
 use std::io::Write;
 use std::process::{Command, Output};
+use ansi_term::{Colour, Style};
 
 pub fn try_with_test_param() {
     let matches = App::new("ver")
@@ -43,4 +45,30 @@ pub fn try_with_test_param() {
     } else {
         println!("the test param is not support!");
     }
+}
+
+/// ansi 终端显示
+// 具体使用，可以查阅 ansi_term 库的文档
+pub fn test_ansi_term() {
+    // 颜色设定
+    println!("red {}", Colour::Red.paint("red"));
+    println!("blue {}", Colour::Blue.paint("blue"));
+    println!("green {}", Colour::Green.paint("green"));
+    // 加粗设定
+    let style1 = Style::new();
+    println!("bold {}", style1.bold().paint("bold"));
+    // 彩色加粗
+    let txt1 = Colour::Yellow.bold().paint("some color and bold");
+    println!("some color and bold {}", txt1);
+    // 下划线
+    println!("underline text {}", Colour::Black.underline().paint("underline text"));
+    // 背景色
+    let style = Colour::RGB(31, 31, 31).on(Colour::White);
+    println!("background text {}", style.paint("background text"));
+    // 自定义颜色 1-255
+    let style = Colour::Fixed(100);
+    println!("diy color text {}", style.paint("diy color text"));
+     // 自定义颜色 RGB 方式
+     let style = Colour::RGB(100, 200, 200);
+     println!("diy color text by rgb {}", style.paint("diy color text by rgb"));
 }

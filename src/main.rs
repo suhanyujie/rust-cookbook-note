@@ -12,6 +12,8 @@ fn main() {
     // process::exit(-1);
 
     // 命令行测试
+    command::test_ansi_term();
+    process::exit(-1);
     command::try_with_test_param();
     process::exit(-1);
 
