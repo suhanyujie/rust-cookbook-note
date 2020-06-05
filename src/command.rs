@@ -1,11 +1,12 @@
-extern crate clap;
 extern crate ansi_term;
+extern crate clap;
 
+use ansi_term::{Colour, Style};
 use clap::{App, Arg};
 use std::io::Write;
 use std::process::{Command, Output};
-use ansi_term::{Colour, Style};
 
+/// 简单的命令行程序示例
 pub fn try_with_test_param() {
     let matches = App::new("ver")
         .version("v0.1.0")
@@ -61,14 +62,20 @@ pub fn test_ansi_term() {
     let txt1 = Colour::Yellow.bold().paint("some color and bold");
     println!("some color and bold {}", txt1);
     // 下划线
-    println!("underline text {}", Colour::Black.underline().paint("underline text"));
+    println!(
+        "underline text {}",
+        Colour::Black.underline().paint("underline text")
+    );
     // 背景色
     let style = Colour::RGB(31, 31, 31).on(Colour::White);
     println!("background text {}", style.paint("background text"));
     // 自定义颜色 1-255
     let style = Colour::Fixed(100);
     println!("diy color text {}", style.paint("diy color text"));
-     // 自定义颜色 RGB 方式
-     let style = Colour::RGB(100, 200, 200);
-     println!("diy color text by rgb {}", style.paint("diy color text by rgb"));
+    // 自定义颜色 RGB 方式
+    let style = Colour::RGB(100, 200, 200);
+    println!(
+        "diy color text by rgb {}",
+        style.paint("diy color text by rgb")
+    );
 }

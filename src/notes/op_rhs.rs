@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Div, Mul, Sub};
 use std::vec::Vec;
 
 #[derive(Debug, PartialEq)]
@@ -11,7 +11,10 @@ impl Add for Point {
     type Output = Point;
 
     fn add(self, other: Point) -> Point {
-        Point {x: self.x + other.x, y: self.y + other.y}
+        Point {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
     }
 }
 
@@ -44,14 +47,17 @@ mod tests {
 
     #[test]
     fn test_point_add() {
-        assert_eq!(Point {x: 3, y: 3} + Point {x: 4, y: 4}, Point {x: 7, y: 7});
+        assert_eq!(
+            Point { x: 3, y: 3 } + Point { x: 4, y: 4 },
+            Point { x: 7, y: 7 }
+        );
     }
 
     #[test]
     fn test_vec_plus() {
-        let a1: MyVec = MyVec(vec![1,2,3]);
-        let a2: MyVec = MyVec(vec![1,2,4,5,6]);
+        let a1: MyVec = MyVec(vec![1, 2, 3]);
+        let a2: MyVec = MyVec(vec![1, 2, 4, 5, 6]);
         let a3: MyVec = a1 + a2;
-        assert_eq!(a3, MyVec(vec![1,2,3,5,6]))
+        assert_eq!(a3, MyVec(vec![1, 2, 3, 5, 6]))
     }
 }
