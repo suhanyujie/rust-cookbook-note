@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 mod algorithm;
 mod command;
 mod notes;
@@ -7,10 +10,13 @@ use notes::alpha;
 use notes::copy_trait;
 use std::process;
 
+
 fn main() {
     // alpha::run();
     // process::exit(-1);
 
+    notes::process_data_competition::test_is_competition();
+    process::exit(-1);
     // 命令行测试
     command::test_ansi_term();
     process::exit(-1);
