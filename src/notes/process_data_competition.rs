@@ -23,7 +23,6 @@ impl MyData0 {
 #[derive(Debug)]
 pub struct MyData(Arc<Mutex<isize>>);
 
-
 impl MyData {
     pub fn new(num: isize) -> MyData {
         MyData(Arc::new(Mutex::new(num)))
@@ -34,6 +33,7 @@ const COUNT: isize = 100;
 // static mut SUM: isize = 0;
 
 // 测试数据竞争
+// 事实上，用普通的方法很难构造出存在数据竞争的场景，这就是 Rust 强大的安全性特性所带来的好处
 pub fn test_is_competition() {
     let num = *SUM0;
     println!("the num is:{:?}", num);
