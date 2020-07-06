@@ -41,7 +41,7 @@ pub fn test_is_competition() {
     let handle1 = thread::spawn(move || {
         for i in 0..COUNT {
             data1 += 1;
-            *SUM0 = data1;
+            // *SUM0 = data1;
             println!("thread1 the result is: {:?}", data1);
         }
     });
@@ -49,7 +49,7 @@ pub fn test_is_competition() {
     let handle2 = thread::spawn(move || {
         for i in 0..COUNT {
             data2 -= 1;
-            *SUM0 = data2;
+            // *SUM0 = data2;
             println!("thread2 the result is: {:?}", data2);
         }
     });

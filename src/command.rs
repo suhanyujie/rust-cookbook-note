@@ -26,6 +26,13 @@ pub fn try_with_test_param() {
                 .takes_value(true)
                 .help("enter a git cmd"),
         )
+        .arg(
+            Arg::with_name("todate")
+                .short("2d")
+                .long("to_date")
+                .takes_value(true)
+                .help("enter a timestamp, tanslate it into date"),
+        )
         .get_matches();
     if let Some(test_param) = matches.value_of("testParam") {
         println!("the test param is :{:?}", test_param);
@@ -43,6 +50,8 @@ pub fn try_with_test_param() {
             Ok(_) => {}
             Err(e) => println!("{}", e),
         }
+    } else if let Some(todate)=matches.value_of("todata") {
+        println!("{}", todate);
     } else {
         println!("the test param is not support!");
     }

@@ -14,13 +14,13 @@ use std::process;
 fn main() {
     // alpha::run();
     // process::exit(-1);
+    command::try_with_test_param();
+    process::exit(-1);
 
     notes::process_data_competition::test_is_competition();
     process::exit(-1);
     // 命令行测试
     command::test_ansi_term();
-    process::exit(-1);
-    command::try_with_test_param();
     process::exit(-1);
 
     copy_trait::sort_for_struct();
