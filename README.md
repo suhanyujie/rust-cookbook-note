@@ -11,6 +11,7 @@
 ### other
 * [Rust Copy trait](docs/notes/1.about-copy-trait.md)
 * [Rust 运算符重载](docs/notes/2.op_rhs.md)
+* [Rust mod 篇 ing](docs/notes/3.rust_mod.md)
 
 ## Usage
 ### test
