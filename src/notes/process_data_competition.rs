@@ -1,9 +1,9 @@
 extern crate lazy_static;
 
+use lazy_static::*;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::rc::Rc;
-use lazy_static::*;
 
 lazy_static! {
     static ref SUM: MyData = MyData::new(0);

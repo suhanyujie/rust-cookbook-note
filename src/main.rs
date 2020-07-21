@@ -8,10 +8,17 @@ mod notes;
 use algorithm::*;
 use notes::alpha;
 use notes::copy_trait;
+use notes::test_module::{self, single_mod};
 use std::process;
 
-
 fn main() {
+    // 测试 rust module 系统
+    single_mod::single_mod::func_0();
+    // 调用一个文件中的类型
+    let s1 = test_module::one_file::Stu::new();
+    println!("{:?}", s1);
+    process::exit(-1);
+
     // alpha::run();
     // process::exit(-1);
     command::try_with_test_param();

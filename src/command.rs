@@ -1,12 +1,12 @@
 extern crate ansi_term;
-extern crate clap;
 extern crate chrono;
+extern crate clap;
 
 use ansi_term::{Colour, Style};
+use chrono::prelude::*;
 use clap::{App, Arg};
 use std::io::Write;
 use std::process::{Command, Output};
-use chrono::prelude::*;
 
 /// 简单的命令行程序示例
 pub fn try_with_test_param() {
@@ -52,13 +52,13 @@ pub fn try_with_test_param() {
             Ok(_) => {}
             Err(e) => println!("{}", e),
         }
-    } else if let Some(todate)=matches.value_of("todate") {
+    } else if let Some(todate) = matches.value_of("todate") {
         let param_rs: i64 = todate.parse().unwrap();
         let mut ts: DateTime<Utc> = Utc::now();
         if param_rs > 0 {
             ts = Utc.timestamp(param_rs, 0);
         }
-        let dt = ts.with_timezone(&FixedOffset::east(8*3600));
+        let dt = ts.with_timezone(&FixedOffset::east(8 * 3600));
         let datetime_str = dt.format("%Y-%m-%d %H:%M:%S").to_string();
         println!("datetime is: {}", datetime_str);
     } else {
