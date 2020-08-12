@@ -1,12 +1,19 @@
-pub fn simple_bubble(arr: Vec<i32>) -> Vec<i32> {
-    let mut a = arr.clone();
+pub fn simple_bubble(arr: &mut Vec<i32>) -> &Vec<i32> {
     // a.sort();
-    for i in 0..a.len() {
-        for j in 0..a.len() {}
+    for i in 0..arr.len() {
+        let mut j = i + 1;
+        while j < arr.len() {
+            if arr[i] > arr[j] {
+                // 交换数据
+                let tmp = arr[j];
+                arr[j] = arr[i];
+                arr[i] = tmp;
+            }
+            j += 1;
+        }
     }
 
-    println!("{:?}", a);
-    return a;
+    arr
 }
 
 /// 插入排序
@@ -36,9 +43,7 @@ pub fn shell_sort(arr: &Vec<i32>) {
     // 获取增长量
     let h = get_shell_addition_rate(arr.len());
     // 排序
-    while h >= 1 {
-
-    }
+    while h >= 1 {}
 }
 
 /// 获取希尔排序的增长量
@@ -56,8 +61,11 @@ mod tests {
 
     #[test]
     fn test_simple_bubble() {
-        let arr1 = vec![11, 2, 34, 29, 8, 19];
-        assert_eq!(vec![2, 8, 11, 19, 29, 34], simple_bubble(arr1))
+        let mut arr1: Vec<i32> = vec![11, 2, 34, 29, 8, 19];
+        assert_eq!(
+            &vec![2, 8, 11, 19, 29, 34], 
+            simple_bubble(&mut arr1)
+        );
     }
 
     #[test]
