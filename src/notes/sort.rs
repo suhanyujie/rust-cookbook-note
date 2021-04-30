@@ -5,9 +5,7 @@ pub fn simple_bubble(arr: &mut Vec<i32>) -> &Vec<i32> {
         while j < arr.len() {
             if arr[i] > arr[j] {
                 // 交换数据
-                let tmp = arr[j];
-                arr[j] = arr[i];
-                arr[i] = tmp;
+                arr.swap(j, i);
             }
             j += 1;
         }
@@ -62,10 +60,9 @@ mod tests {
     #[test]
     fn test_simple_bubble() {
         let mut arr1: Vec<i32> = vec![11, 2, 34, 29, 8, 19];
-        assert_eq!(
-            &vec![2, 8, 11, 19, 29, 34], 
-            simple_bubble(&mut arr1)
-        );
+        assert_eq!(&vec![2, 8, 11, 19, 29, 34], simple_bubble(&mut arr1));
+        let mut arr1: Vec<i32> = vec![-1, 2, 0, -7, 2, 9];
+        assert_eq!(&vec![-7, -1, 0, 2, 2, 9], simple_bubble(&mut arr1));
     }
 
     #[test]
