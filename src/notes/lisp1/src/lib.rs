@@ -1,4 +1,5 @@
-use std::{collections::HashMap, hash::Hash, num::ParseFloatError};
+use core::fmt;
+use std::{collections::HashMap, hash::Hash, io, num::ParseFloatError};
 
 #[derive(Clone)]
 enum RispExp {
@@ -56,7 +57,7 @@ fn parse_list_of_floats(args: &[RispExp]) -> Result<Vec<f64>, RispErr> {
     args.iter().map(|x| parse_single_float(x)).collect()
 }
 
-fn parse_single_float(exp: &RispExp) -> Result<f64, RispExp> {
+fn parse_single_float(exp: &RispExp) -> Result<f64, RispErr> {
     match exp {
         RispExp::Number(num) => Ok(*num),
         _ => Err(RispErr::Reason("expect a number".to_string())),
@@ -96,6 +97,79 @@ fn default_env() -> RispEnv {
     );
 
     RispEnv { data }
+}
+
+fn eval(exp: &RispExp, env: &mut RispEnv) -> Result<RispExp, RispErr> {
+    match exp {
+        RispExp::Symbol(k) => env
+            .data
+            .get(k)
+            .ok_or(RispErr::Reason(format!("unexpected symbol k={}", k)))
+            .map(|x| x.clone()),
+        RispExp::Number(_a) => Ok(exp.clone()),
+        RispExp::List(list) => {
+            let first_form = list
+                .first()
+                .ok_or(RispErr::Reason("expected a non-empty list".to_string()))?;
+            let arg_forms = &list[1..];
+            let first_eval = eval(first_form, env)?;
+            match first_eval {
+                RispExp::Func(f) => {
+                    let args_eval = arg_forms
+                        .iter()
+                        .map(|x| eval(x, env))
+                        .collect::<Result<Vec<RispExp>, RispErr>>();
+                    f(&args_eval?)
+                }
+                _ => Err(RispErr::Reason("first form must be a function".to_string())),
+            }
+        }
+        RispExp::Func(_) => Err(RispErr::Reason("unexpected form".to_string())),
+    }
+}
+
+// 51.65kg 162
+impl fmt::Display for RispExp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let str = match self {
+            RispExp::Symbol(s) => s.clone(),
+            RispExp::Number(n) => n.to_string(),
+            RispExp::List(list) => {
+                let xs: Vec<String> = list.iter().map(|x| x.to_string()).collect();
+                format!("{}", xs.join(","))
+            }
+            RispExp::Func(_) => "Function {}".to_string(),
+        };
+        write!(f, "{}", str)
+    }
+}
+
+fn parse_eval(expr: String, env: &mut RispEnv) -> Result<RispExp, RispErr> {
+    let (parsed_exp, _) = parse(&tokenize(expr))?;
+    let evaled_exp = eval(&parsed_exp, env)?;
+    Ok(evaled_exp)
+}
+
+fn slurp_expr() -> String {
+    let mut expr = String::new();
+    io::stdin()
+        .read_line(&mut expr)
+        .expect("Failed to read line");
+    expr
+}
+
+pub fn run_repl() {
+    let env = &mut default_env();
+    loop {
+        println!("risp >");
+        let expr = slurp_expr();
+        match parse_eval(expr, env) {
+            Ok(res) => println!("// => {}", res),
+            Err(e) => match e {
+                RispErr::Reason(msg) => println!("// => {}", msg),
+            },
+        }
+    }
 }
 
 #[cfg(test)]
