@@ -1,7 +1,7 @@
 use std::convert::AsRef;
 
 fn main() {
-    demo1();
+    demo1_1();
 }
 
 fn demo1() {
@@ -10,10 +10,18 @@ fn demo1() {
     // println!("{:?}", s2);
 }
 
-impl AsRef<String> for String {
-    // fn as_ref(&self) -> &T {
-    //     todo!()
-    // }
+fn demo1_1() {
+    let s1 = MyStr(String::from("hello"));
+    let s2 = s1.as_ref();
+    println!("{:?}", s2);
+}
+
+struct MyStr(String);
+
+impl AsRef<str> for MyStr {
+    fn as_ref(&self) -> &str {
+        return &self.0;
+    }
 }
 
 fn demo0() {
@@ -94,7 +102,9 @@ error: aborting due to previous error
 
 ## 参考
 * Rust's as_ref vs as_deref https://www.fpcomplete.com/blog/rust-asref-asderef/
-
+* Using Deref and AsRef for function arguments https://riptutorial.com/rust/example/16352/using-deref-and-asref-for-function-arguments
+* Rust 类型转换 https://www.cnblogs.com/ywxt/p/11801778.html
+* AsRef、Deref和Borrow有哪些区别？ https://www.zhihu.com/question/470049587
 
 
 

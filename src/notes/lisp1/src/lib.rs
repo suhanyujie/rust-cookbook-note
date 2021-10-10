@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::HashMap, hash::Hash, io, num::ParseFloatError};
+use std::{collections::HashMap, io, num::ParseFloatError};
 
 #[derive(Clone)]
 enum RispExp {
@@ -164,9 +164,9 @@ pub fn run_repl() {
         println!("risp >");
         let expr = slurp_expr();
         match parse_eval(expr, env) {
-            Ok(res) => println!("// => {}", res),
+            Ok(res) => println!("// 🔥 => {}", res),
             Err(e) => match e {
-                RispErr::Reason(msg) => println!("// => {}", msg),
+                RispErr::Reason(msg) => println!("// 🙀 => {}", msg),
             },
         }
     }
