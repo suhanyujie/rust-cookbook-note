@@ -7,6 +7,7 @@ enum RispExp {
     Number(f64),
     List(Vec<RispExp>),
     Func(fn(&[RispExp]) -> Result<RispExp, RispErr>),
+    Bool(bool),
 }
 
 enum RispErr {
@@ -65,11 +66,52 @@ fn parse_single_float(exp: &RispExp) -> Result<f64, RispErr> {
 }
 
 fn parse_atom(token: &str) -> RispExp {
-    let potential_float: Result<f64, ParseFloatError> = token.parse();
-    match potential_float {
-        Ok(v) => RispExp::Number(v),
-        Err(_) => RispExp::Symbol(token.to_string().clone()),
+    match token {
+        "true" => RispExp::Bool(true),
+        "false" => RispExp::Bool(false),
+        _ => {
+            let potential_float: Result<f64, ParseFloatError> = token.parse();
+            match potential_float {
+                Ok(v) => RispExp::Number(v),
+                Err(_) => RispExp::Symbol(token.to_string().clone()),
+            }
+        }
     }
+}
+
+// assembly the cmp func
+// fn get_cmp_func(cmp_func: impl Fn(&f64, &f64) -> bool) -> fn(&[RispExp]) -> Result<RispExp, RispErr> {
+//     let f =  |args: &[RispExp]| -> Result<RispExp, RispErr> {
+//         let floats = parse_list_of_floats(args)?;
+//         let first = floats.first().ok_or(RispErr::Reason("expected at least one number".to_string()))?;
+//         // 要想比较，需要有两个值
+//         if floats.len() != 2 {
+//             return Err(RispErr::Reason("expected two number".to_string()));
+//         }
+//         // 将第 0 个元素和第 1 个元素进行比较
+//         if floats.get(0).is_none() || floats.get(1).is_none() {
+//             return Err(RispErr::Reason("expected number".to_string()));
+//         }
+//         Ok(RispExp::Bool(cmp_func(floats.get(0).unwrap(), floats.get(1).unwrap())))
+//     };
+//     return f;
+// }
+
+macro_rules! ensure_tonicity {
+  ($check_fn:expr) => {{
+    |args: &[RispExp]| -> Result<RispExp, RispErr> {
+      let floats = parse_list_of_floats(args)?;
+      let first = floats.first().ok_or(RispErr::Reason("expected at least one number".to_string()))?;
+      let rest = &floats[1..];
+      fn f (prev: &f64, xs: &[f64]) -> bool {
+        match xs.first() {
+          Some(x) => $check_fn(prev, x) && f(x, &xs[1..]),
+          None => true,
+        }
+      };
+      Ok(RispExp::Bool(f(first, rest)))
+    }
+  }};
 }
 
 fn default_env() -> RispEnv {
@@ -95,6 +137,48 @@ fn default_env() -> RispEnv {
             Ok(RispExp::Number(first - sum_of_rest))
         }),
     );
+    // = 逻辑实现
+    let f1 = |args: &[RispExp]| -> Result<RispExp, RispErr> {
+            let floats = parse_list_of_floats(args)?;
+            // 要想比较，需要有两个值
+            if floats.len() != 2 {
+                return Err(RispErr::Reason("expected two number".to_string()));
+            }
+            // 将第 0 个元素和第 1 个元素进行比较
+            if floats.get(0).is_none() || floats.get(1).is_none() {
+                return Err(RispErr::Reason("expected number".to_string()));
+            }
+            let is_ok = floats.get(0).unwrap().eq(floats.get(1).unwrap());
+            Ok(RispExp::Bool(is_ok))
+        };
+    data.insert(
+        "=".to_string(),
+        RispExp::Func(f1),
+    );
+
+    // 以宏的方式实现可以参考 https://stopachka.essay.dev/post/5/risp-in-rust-lisp#comparison-operators
+    data.insert(
+        "=".to_string(),
+        RispExp::Func(|args: &[RispExp]| -> Result<RispExp, RispErr> {
+            let floats = parse_list_of_floats(args)?;
+            // 要想比较，需要有两个值
+            if floats.len() != 2 {
+                return Err(RispErr::Reason("expected two number".to_string()));
+            }
+            // 将第 0 个元素和第 1 个元素进行比较
+            if floats.get(0).is_none() || floats.get(1).is_none() {
+                return Err(RispErr::Reason("expected number".to_string()));
+            }
+            let is_ok = floats.get(0).unwrap().eq(floats.get(1).unwrap());
+            Ok(RispExp::Bool(is_ok))
+        }),
+    );
+    data.insert(">".to_string(), RispExp::Func(ensure_tonicity!(|a, b| a > b)));
+
+    data.insert(">=".to_string(), RispExp::Func(|args: &[RispExp]| -> Result<RispExp, RispErr> {
+      let floats = parse_list_of_floats(args)?;
+      Ok(RispExp::Bool(floats.get(0).unwrap().gt(floats.get(1).unwrap())))
+    }));
 
     RispEnv { data }
 }
@@ -107,6 +191,7 @@ fn eval(exp: &RispExp, env: &mut RispEnv) -> Result<RispExp, RispErr> {
             .ok_or(RispErr::Reason(format!("unexpected symbol k={}", k)))
             .map(|x| x.clone()),
         RispExp::Number(_a) => Ok(exp.clone()),
+        RispExp::Bool(_a) => Ok(exp.clone()),
         RispExp::List(list) => {
             let first_form = list
                 .first()
@@ -128,12 +213,13 @@ fn eval(exp: &RispExp, env: &mut RispEnv) -> Result<RispExp, RispErr> {
     }
 }
 
-// 51.65kg 162
+/// display for RispExp
 impl fmt::Display for RispExp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let str = match self {
             RispExp::Symbol(s) => s.clone(),
             RispExp::Number(n) => n.to_string(),
+            RispExp::Bool(b_val) => b_val.to_string(),
             RispExp::List(list) => {
                 let xs: Vec<String> = list.iter().map(|x| x.to_string()).collect();
                 format!("{}", xs.join(","))
@@ -168,6 +254,28 @@ pub fn run_repl() {
             Err(e) => match e {
                 RispErr::Reason(msg) => println!("// 🙀 => {}", msg),
             },
+        }
+    }
+}
+
+/// 分离出切片的第一个元素
+/// 参考 https://doc.rust-lang.org/std/primitive.slice.html#method.split_first
+fn split_first<T>(a: &[T]) -> Option<(&T, &[T])> {
+    match a {
+        [head, tail @ ..] => Some((head, tail)),
+        [] => None,
+    }
+}
+
+/// 分离出切片的前两个元素
+fn split_prev_two<T>(a: &[T]) -> Option<(&T, &T, &[T])> {
+    match a {
+        [first, second, tail @ ..] => Some((first, second, tail)),
+        [] => None,
+        &[_] => {
+            // 匹配其他情况：只有一个元素和两个元素的情况
+            // 如果原切片只有1-2 个元素，那么无法匹配出 (&T, &T, &T) 的情况，此时直接返回 None
+            None
         }
     }
 }
