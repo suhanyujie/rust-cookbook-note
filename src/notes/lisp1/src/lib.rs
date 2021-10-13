@@ -98,20 +98,22 @@ fn parse_atom(token: &str) -> RispExp {
 // }
 
 macro_rules! ensure_tonicity {
-  ($check_fn:expr) => {{
-    |args: &[RispExp]| -> Result<RispExp, RispErr> {
-      let floats = parse_list_of_floats(args)?;
-      let first = floats.first().ok_or(RispErr::Reason("expected at least one number".to_string()))?;
-      let rest = &floats[1..];
-      fn f (prev: &f64, xs: &[f64]) -> bool {
-        match xs.first() {
-          Some(x) => $check_fn(prev, x) && f(x, &xs[1..]),
-          None => true,
+    ($check_fn:expr) => {{
+        |args: &[RispExp]| -> Result<RispExp, RispErr> {
+            let floats = parse_list_of_floats(args)?;
+            let first = floats
+                .first()
+                .ok_or(RispErr::Reason("expected at least one number".to_string()))?;
+            let rest = &floats[1..];
+            fn f(prev: &f64, xs: &[f64]) -> bool {
+                match xs.first() {
+                    Some(x) => $check_fn(prev, x) && f(x, &xs[1..]),
+                    None => true,
+                }
+            };
+            Ok(RispExp::Bool(f(first, rest)))
         }
-      };
-      Ok(RispExp::Bool(f(first, rest)))
-    }
-  }};
+    }};
 }
 
 fn default_env() -> RispEnv {
@@ -139,22 +141,19 @@ fn default_env() -> RispEnv {
     );
     // = 逻辑实现
     let f1 = |args: &[RispExp]| -> Result<RispExp, RispErr> {
-            let floats = parse_list_of_floats(args)?;
-            // 要想比较，需要有两个值
-            if floats.len() != 2 {
-                return Err(RispErr::Reason("expected two number".to_string()));
-            }
-            // 将第 0 个元素和第 1 个元素进行比较
-            if floats.get(0).is_none() || floats.get(1).is_none() {
-                return Err(RispErr::Reason("expected number".to_string()));
-            }
-            let is_ok = floats.get(0).unwrap().eq(floats.get(1).unwrap());
-            Ok(RispExp::Bool(is_ok))
-        };
-    data.insert(
-        "=".to_string(),
-        RispExp::Func(f1),
-    );
+        let floats = parse_list_of_floats(args)?;
+        // 要想比较，需要有两个值
+        if floats.len() != 2 {
+            return Err(RispErr::Reason("expected two number".to_string()));
+        }
+        // 将第 0 个元素和第 1 个元素进行比较
+        if floats.get(0).is_none() || floats.get(1).is_none() {
+            return Err(RispErr::Reason("expected number".to_string()));
+        }
+        let is_ok = floats.get(0).unwrap().eq(floats.get(1).unwrap());
+        Ok(RispExp::Bool(is_ok))
+    };
+    data.insert("=".to_string(), RispExp::Func(f1));
 
     // 以宏的方式实现可以参考 https://stopachka.essay.dev/post/5/risp-in-rust-lisp#comparison-operators
     data.insert(
@@ -173,12 +172,20 @@ fn default_env() -> RispEnv {
             Ok(RispExp::Bool(is_ok))
         }),
     );
-    data.insert(">".to_string(), RispExp::Func(ensure_tonicity!(|a, b| a > b)));
+    data.insert(
+        ">".to_string(),
+        RispExp::Func(ensure_tonicity!(|a, b| a > b)),
+    );
 
-    data.insert(">=".to_string(), RispExp::Func(|args: &[RispExp]| -> Result<RispExp, RispErr> {
-      let floats = parse_list_of_floats(args)?;
-      Ok(RispExp::Bool(floats.get(0).unwrap().gt(floats.get(1).unwrap())))
-    }));
+    data.insert(
+        ">=".to_string(),
+        RispExp::Func(|args: &[RispExp]| -> Result<RispExp, RispErr> {
+            let floats = parse_list_of_floats(args)?;
+            Ok(RispExp::Bool(
+                floats.get(0).unwrap().gt(floats.get(1).unwrap()),
+            ))
+        }),
+    );
 
     RispEnv { data }
 }
@@ -280,6 +287,8 @@ fn split_prev_two<T>(a: &[T]) -> Option<(&T, &T, &[T])> {
     }
 }
 
+/// 测试枚举类型中的函数
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -290,5 +299,29 @@ mod tests {
         let res = tokenize(src.into());
         println!("{:?}", res);
         assert!(false);
+    }
+
+    enum EA {
+        Func(fn(a: isize, b: isize) -> bool),
+    }
+
+    #[test]
+    fn test_enum_func() {
+        // 方式 1
+        fn f1(a: isize, b: isize) -> bool {
+            a > b
+        }
+        let a = EA::Func(f1);
+        // 方式 2
+        let c1 = |a, b| {a > b};
+        let a = EA::Func(c1);
+        // 方式 3
+        let a = EA::Func(get_fn_or_closure());
+    }
+
+    fn get_fn_or_closure() -> fn(isize, isize) -> bool {
+        // 这种闭包形式的代码，如果没有捕获，则被推导为函数指针。
+        // > 没有捕获的闭包和函数指针相同
+        |a, b| a > b
     }
 }
