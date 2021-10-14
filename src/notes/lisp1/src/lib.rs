@@ -79,24 +79,7 @@ fn parse_atom(token: &str) -> RispExp {
     }
 }
 
-// assembly the cmp func
-// fn get_cmp_func(cmp_func: impl Fn(&f64, &f64) -> bool) -> fn(&[RispExp]) -> Result<RispExp, RispErr> {
-//     let f =  |args: &[RispExp]| -> Result<RispExp, RispErr> {
-//         let floats = parse_list_of_floats(args)?;
-//         let first = floats.first().ok_or(RispErr::Reason("expected at least one number".to_string()))?;
-//         // 要想比较，需要有两个值
-//         if floats.len() != 2 {
-//             return Err(RispErr::Reason("expected two number".to_string()));
-//         }
-//         // 将第 0 个元素和第 1 个元素进行比较
-//         if floats.get(0).is_none() || floats.get(1).is_none() {
-//             return Err(RispErr::Reason("expected number".to_string()));
-//         }
-//         Ok(RispExp::Bool(cmp_func(floats.get(0).unwrap(), floats.get(1).unwrap())))
-//     };
-//     return f;
-// }
-
+// 参考 https://stopachka.essay.dev/post/5/risp-in-rust-lisp#comparison-operators
 macro_rules! ensure_tonicity {
     ($check_fn:expr) => {{
         |args: &[RispExp]| -> Result<RispExp, RispErr> {
@@ -164,7 +147,7 @@ fn default_env() -> RispEnv {
             if floats.len() != 2 {
                 return Err(RispErr::Reason("expected two number".to_string()));
             }
-            // 将第 0 个元素和第 1 个元素进行比较
+            // 校验这两个值必须存在
             if floats.get(0).is_none() || floats.get(1).is_none() {
                 return Err(RispErr::Reason("expected number".to_string()));
             }
@@ -172,19 +155,38 @@ fn default_env() -> RispEnv {
             Ok(RispExp::Bool(is_ok))
         }),
     );
+
+    data.insert(
+        ">=".to_string(),
+        RispExp::Func(|args: &[RispExp]| -> Result<RispExp, RispErr> {
+            let floats = parse_list_of_floats(args)?;
+             // 要想比较，需要有两个值
+            if floats.len() != 2 {
+                return Err(RispErr::Reason("expected two number".to_string()));
+            }
+             // 校验这两个值必须存在
+            if floats.get(0).is_none() || floats.get(1).is_none() {
+                return Err(RispErr::Reason("expected number".to_string()));
+            }
+            Ok(RispExp::Bool(
+                floats.get(0).unwrap().gt(floats.get(1).unwrap()),
+            ))
+        }),
+    );
+
     data.insert(
         ">".to_string(),
         RispExp::Func(ensure_tonicity!(|a, b| a > b)),
     );
 
     data.insert(
-        ">=".to_string(),
-        RispExp::Func(|args: &[RispExp]| -> Result<RispExp, RispErr> {
-            let floats = parse_list_of_floats(args)?;
-            Ok(RispExp::Bool(
-                floats.get(0).unwrap().gt(floats.get(1).unwrap()),
-            ))
-        }),
+        "<".to_string(),
+        RispExp::Func(ensure_tonicity!(|a, b| a < b)),
+    );
+
+    data.insert(
+        "<=".to_string(),
+        RispExp::Func(ensure_tonicity!(|a, b| a <= b)),
     );
 
     RispEnv { data }
@@ -320,7 +322,7 @@ mod tests {
     }
 
     fn get_fn_or_closure() -> fn(isize, isize) -> bool {
-        // 这种闭包形式的代码，如果没有捕获，则被推导为函数指针。
+        // 这种闭包形式的代码，如果没有捕获（变量需要捕获），则被推导为函数指针。
         // > 没有捕获的闭包和函数指针相同
         |a, b| a > b
     }
