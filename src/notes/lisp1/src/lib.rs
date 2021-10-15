@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::HashMap, io, num::ParseFloatError};
+use std::{collections::HashMap, fmt::format, io, num::ParseFloatError};
 
 #[derive(Clone)]
 enum RispExp {
@@ -160,11 +160,11 @@ fn default_env() -> RispEnv {
         ">=".to_string(),
         RispExp::Func(|args: &[RispExp]| -> Result<RispExp, RispErr> {
             let floats = parse_list_of_floats(args)?;
-             // 要想比较，需要有两个值
+            // 要想比较，需要有两个值
             if floats.len() != 2 {
                 return Err(RispErr::Reason("expected two number".to_string()));
             }
-             // 校验这两个值必须存在
+            // 校验这两个值必须存在
             if floats.get(0).is_none() || floats.get(1).is_none() {
                 return Err(RispErr::Reason("expected number".to_string()));
             }
@@ -206,19 +206,78 @@ fn eval(exp: &RispExp, env: &mut RispEnv) -> Result<RispExp, RispErr> {
                 .first()
                 .ok_or(RispErr::Reason("expected a non-empty list".to_string()))?;
             let arg_forms = &list[1..];
-            let first_eval = eval(first_form, env)?;
-            match first_eval {
-                RispExp::Func(f) => {
-                    let args_eval = arg_forms
-                        .iter()
-                        .map(|x| eval(x, env))
-                        .collect::<Result<Vec<RispExp>, RispErr>>();
-                    f(&args_eval?)
+            // 优先匹配并处理“关键字”
+            match eval_built_in_form(first_form, arg_forms, env) {
+                Some(built_in_res) => built_in_res,
+                None => {
+                    let first_eval = eval(first_form, env)?;
+                    match first_eval {
+                        RispExp::Func(f) => {
+                            let args_eval = arg_forms
+                                .iter()
+                                .map(|x| eval(x, env))
+                                .collect::<Result<Vec<RispExp>, RispErr>>();
+                            f(&args_eval?)
+                        }
+                        _ => Err(RispErr::Reason("first form must be a function".to_string())),
+                    }
                 }
-                _ => Err(RispErr::Reason("first form must be a function".to_string())),
             }
         }
         RispExp::Func(_) => Err(RispErr::Reason("unexpected form".to_string())),
+    }
+}
+
+// 处理内置标识符
+fn eval_built_in_form(
+    exp: &RispExp,
+    other_args: &[RispExp],
+    env: &mut RispEnv,
+) -> Option<Result<RispExp, RispErr>> {
+    match exp {
+        &RispExp::Symbol(symbol) => match symbol.as_ref() {
+            "if" => Some(eval_if_args(other_args, env)),
+            "def" => Some(eval_def_args(other_args, env)),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn eval_if_args(args: &[RispExp], env: &mut RispEnv) -> Result<RispExp, RispErr> {
+    let test_form = args
+        .first()
+        .ok_or(RispErr::Reason("expected test form".to_string()))?;
+    let test_eval = eval(test_form, env)?;
+    match test_eval {
+        RispExp::Bool(b) => {
+            let form_idx = if b { 1 } else { 2 };
+            let res_form = args
+                .get(form_idx)
+                .ok_or(RispErr::Reason(format!("expected form idx={}", form_idx)))?;
+            let res_eval = eval(res_form, env);
+            res_eval
+        }
+        _ => Err(RispErr::Reason(format!(
+            "unexpected test form='{}'",
+            test_form.to_string()
+        ))),
+    }
+}
+
+fn eval_def_args(args: &[RispExp], env: &mut RispEnv) -> Result<RispExp, RispErr> {
+    let var_exp = args.first().ok_or(RispErr::Reason(format!("unexepceted string for var")))?;
+    let remain_args = &args[1..];
+    let val_op = remain_args.get(0);
+    if val_op.is_none() {
+        return Err(RispErr::Reason(format!("unexpected var val")))
+    }
+    match var_exp {
+        &RispExp::Symbol(var_name) => {
+            env.data.insert(&var_name, val_op.unwrap());
+            eval(exp, env)
+        },
+        _ => Err(RispErr::Reason(format!("unexpected var name")))
     }
 }
 
@@ -315,7 +374,7 @@ mod tests {
         }
         let a = EA::Func(f1);
         // 方式 2
-        let c1 = |a, b| {a > b};
+        let c1 = |a, b| a > b;
         let a = EA::Func(c1);
         // 方式 3
         let a = EA::Func(get_fn_or_closure());
