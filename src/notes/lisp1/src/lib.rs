@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::HashMap, fmt::format, io, num::ParseFloatError};
+use std::{collections::HashMap, fmt::format, io, num::ParseFloatError, rc::Rc};
 
 #[derive(Clone)]
 enum RispExp {
@@ -8,6 +8,13 @@ enum RispExp {
     List(Vec<RispExp>),
     Func(fn(&[RispExp]) -> Result<RispExp, RispErr>),
     Bool(bool),
+    Lambda(RispLambda),
+}
+
+#[derive(Clone)]
+struct RispLambda {
+    params: Rc<RispExp>,
+    body: Rc<RispExp>,
 }
 
 enum RispErr {
@@ -15,8 +22,9 @@ enum RispErr {
 }
 
 #[derive(Clone)]
-struct RispEnv {
+struct RispEnv<'a> {
     data: HashMap<String, RispExp>,
+    outer: Option<&'a RispEnv<'a>>,
 }
 
 fn tokenize(expr: String) -> Vec<String> {
@@ -99,7 +107,7 @@ macro_rules! ensure_tonicity {
     }};
 }
 
-fn default_env() -> RispEnv {
+fn default_env<'a>() -> RispEnv<'a> {
     let mut data: HashMap<String, RispExp> = HashMap::new();
     data.insert(
         "+".to_string(),
@@ -189,14 +197,23 @@ fn default_env() -> RispEnv {
         RispExp::Func(ensure_tonicity!(|a, b| a <= b)),
     );
 
-    RispEnv { data }
+    RispEnv { data, outer: None }
+}
+
+/// 从环境中查找标识符的值。先在内部作用域查找，找不到再到外层作用域查找
+fn env_get(key: &str, env: &RispEnv) -> Option<RispExp> {
+    match env.data.get(key) {
+        Some(exp) => Some(exp.clone()),
+        None => match env.outer {
+            Some(outer_env) => env_get(key, &outer_env),
+            None => None,
+        },
+    }
 }
 
 fn eval(exp: &RispExp, env: &mut RispEnv) -> Result<RispExp, RispErr> {
     match exp {
-        RispExp::Symbol(k) => env
-            .data
-            .get(k)
+        RispExp::Symbol(k) => env_get(&k, env)
             .ok_or(RispErr::Reason(format!("unexpected symbol k={}", k)))
             .map(|x| x.clone()),
         RispExp::Number(_a) => Ok(exp.clone()),
@@ -219,13 +236,63 @@ fn eval(exp: &RispExp, env: &mut RispEnv) -> Result<RispExp, RispErr> {
                                 .collect::<Result<Vec<RispExp>, RispErr>>();
                             f(&args_eval?)
                         }
+                        RispExp::Lambda(lambda) => {
+                            let new_env = &mut env_for_lambda(lambda.params, arg_forms, env)?;
+                            eval(&lambda.body, new_env)
+                        },
                         _ => Err(RispErr::Reason("first form must be a function".to_string())),
                     }
                 }
             }
+        },
+        _ => {
+            Err(RispErr::Reason("not supported type.".to_string()))
         }
-        RispExp::Func(_) => Err(RispErr::Reason("unexpected form".to_string())),
     }
+}
+
+fn eval_forms(args: &[RispExp], env: &mut RispEnv) -> Result<Vec<RispExp>, RispErr> {
+    args.iter().map(|x| eval(x, env)).collect()
+}
+
+fn env_for_lambda<'a>(
+    params: Rc<RispExp>,
+    args: &[RispExp],
+    outer_env: &'a mut RispEnv,
+) -> Result<RispEnv<'a>, RispErr> {
+    let ks = parse_list_of_symbol_strings(params)?;
+    if ks.len() != args.len() {
+        return Err(RispErr::Reason(format!(
+            "expected {} params, got {}",
+            ks.len(),
+            args.len()
+        )));
+    }
+    let vs = eval_forms(args, outer_env)?;
+    let mut data: HashMap<String, RispExp> = HashMap::new();
+    for (k, v) in ks.iter().zip(vs.iter()) {
+        data.insert(k.clone(), v.clone());
+    }
+
+    Ok(RispEnv {
+        data,
+        outer: Some(outer_env),
+    })
+}
+
+fn parse_list_of_symbol_strings(params: Rc<RispExp>) -> Result<Vec<String>, RispErr> {
+    let list = match params.as_ref() {
+        RispExp::List(s) => Ok(s.clone()),
+        _ => Err(RispErr::Reason(format!("expected params to be a list"))),
+    }?;
+    list.iter()
+        .map(|x| match x {
+            RispExp::Symbol(s) => Ok(s.clone()),
+            _ => Err(RispErr::Reason(format!(
+                "expected symbol in the argument list"
+            ))),
+        })
+        .collect()
 }
 
 // 处理内置标识符
@@ -234,16 +301,18 @@ fn eval_built_in_form(
     other_args: &[RispExp],
     env: &mut RispEnv,
 ) -> Option<Result<RispExp, RispErr>> {
-    match exp {
-        &RispExp::Symbol(symbol) => match symbol.as_ref() {
+    match &exp {
+        RispExp::Symbol(symbol) => match symbol.as_ref() {
             "if" => Some(eval_if_args(other_args, env)),
             "def" => Some(eval_def_args(other_args, env)),
+            "fn" => Some(eval_lambda_args(other_args)),
             _ => None,
         },
         _ => None,
     }
 }
 
+/// if 语法的实现。`(if test conseq alt)`
 fn eval_if_args(args: &[RispExp], env: &mut RispEnv) -> Result<RispExp, RispErr> {
     let test_form = args
         .first()
@@ -265,20 +334,42 @@ fn eval_if_args(args: &[RispExp], env: &mut RispEnv) -> Result<RispExp, RispErr>
     }
 }
 
+/// def 语法的实现。`(define var exp)`
 fn eval_def_args(args: &[RispExp], env: &mut RispEnv) -> Result<RispExp, RispErr> {
-    let var_exp = args.first().ok_or(RispErr::Reason(format!("unexepceted string for var")))?;
-    let remain_args = &args[1..];
-    let val_op = remain_args.get(0);
-    if val_op.is_none() {
-        return Err(RispErr::Reason(format!("unexpected var val")))
-    }
+    let var_exp = args
+        .first()
+        .ok_or(RispErr::Reason(format!("unexepceted string for var")))?;
+
+    let val_res = args
+        .get(1)
+        .ok_or(RispErr::Reason(format!("expected second param.")))?;
+    let evaled_val = eval(val_res, env)?;
+
     match var_exp {
-        &RispExp::Symbol(var_name) => {
-            env.data.insert(&var_name, val_op.unwrap());
-            eval(exp, env)
-        },
-        _ => Err(RispErr::Reason(format!("unexpected var name")))
+        RispExp::Symbol(ref var_name) => {
+            env.data.insert(var_name.clone(), evaled_val);
+            Ok(var_exp.clone())
+        }
+        _ => Err(RispErr::Reason(format!("unexpected var name"))),
     }
+}
+
+/// lambda 语法的实现。语法：`(lambda (var...) exp)`，例如表达式：`(lambda (r) (* 3.14 (* r r)))`
+/// 由三部分组成，第一部分是关键字 `lambda`，第二部分是变量列表 `(r)`；第三部分是函数（lambda）主体 `(* 3.14 (* r r))`
+fn eval_lambda_args(args: &[RispExp]) -> Result<RispExp, RispErr> {
+    let params = args
+        .first()
+        .ok_or(RispErr::Reason(format!("unexpected args form")))?;
+    let body = args
+        .get(1)
+        .ok_or(RispErr::Reason(format!("unexpected second form")))?;
+    if args.len() != 2 {
+        return Err(RispErr::Reason(format!("lambda can only have two forms")));
+    }
+    Ok(RispExp::Lambda(RispLambda {
+        params: Rc::new(params.clone()),
+        body: Rc::new(body.clone()),
+    }))
 }
 
 /// display for RispExp
@@ -288,6 +379,7 @@ impl fmt::Display for RispExp {
             RispExp::Symbol(s) => s.clone(),
             RispExp::Number(n) => n.to_string(),
             RispExp::Bool(b_val) => b_val.to_string(),
+            RispExp::Lambda(_) => "Lambda {}".to_string(),
             RispExp::List(list) => {
                 let xs: Vec<String> = list.iter().map(|x| x.to_string()).collect();
                 format!("{}", xs.join(","))
