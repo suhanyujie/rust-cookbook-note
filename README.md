@@ -13,6 +13,7 @@
 * [Rust 运算符重载](docs/notes/2.op_rhs.md)
 * [Rust mod 篇](docs/notes/3.rust_mod.md)
 * [学习 Rust 之基于 RefCell 的简单二叉树](docs/notes/5.simple-binary-tree.md)   status: ing
+* [用 Rust 实现 Lisp](docs/4.lisp.md)
 
 ## Usage
 ### test
