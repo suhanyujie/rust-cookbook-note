@@ -46,6 +46,7 @@ fn parse<'a>(tokens: &'a [String]) -> Result<(RispExp, &'a [String]), RispErr> {
     }
 }
 
+/// 读取一块序列。一个单独的括号内的序列（表达式）。
 fn read_seq<'a>(tokens: &'a [String]) -> Result<(RispExp, &'a [String]), RispErr> {
     let mut res: Vec<RispExp> = vec![];
     let mut xs = tokens;
@@ -301,11 +302,11 @@ fn eval_built_in_form(
     other_args: &[RispExp],
     env: &mut RispEnv,
 ) -> Option<Result<RispExp, RispErr>> {
-    match &exp {
+    match exp {
         RispExp::Symbol(symbol) => match symbol.as_ref() {
             "if" => Some(eval_if_args(other_args, env)),
             "def" => Some(eval_def_args(other_args, env)),
-            "fn" => Some(eval_lambda_args(other_args)),
+            "lambda" => Some(eval_lambda_args(other_args)),
             _ => None,
         },
         _ => None,
