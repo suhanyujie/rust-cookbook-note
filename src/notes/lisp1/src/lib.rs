@@ -252,10 +252,12 @@ fn eval(exp: &RispExp, env: &mut RispEnv) -> Result<RispExp, RispErr> {
     }
 }
 
+/// 执行一组表达式，将结果放入数组中
 fn eval_forms(args: &[RispExp], env: &mut RispEnv) -> Result<Vec<RispExp>, RispErr> {
     args.iter().map(|x| eval(x, env)).collect()
 }
 
+/// 构建 lambda 执行环境
 fn env_for_lambda<'a>(
     params: Rc<RispExp>,
     args: &[RispExp],
@@ -281,6 +283,7 @@ fn env_for_lambda<'a>(
     })
 }
 
+/// 解析参数列表
 fn parse_list_of_symbol_strings(params: Rc<RispExp>) -> Result<Vec<String>, RispErr> {
     let list = match params.as_ref() {
         RispExp::List(s) => Ok(s.clone()),
@@ -296,7 +299,7 @@ fn parse_list_of_symbol_strings(params: Rc<RispExp>) -> Result<Vec<String>, Risp
         .collect()
 }
 
-// 处理内置标识符
+/// 处理内置标识符
 fn eval_built_in_form(
     exp: &RispExp,
     other_args: &[RispExp],
