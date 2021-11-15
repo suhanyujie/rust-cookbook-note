@@ -42,6 +42,7 @@ pub fn shell_sort(arr: &Vec<i32>) {
     let h = get_shell_addition_rate(arr.len());
     // 排序
     while h >= 1 {}
+    todo!()
 }
 
 /// 获取希尔排序的增长量
