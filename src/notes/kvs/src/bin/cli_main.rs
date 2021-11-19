@@ -6,16 +6,27 @@ use log::{debug, error, info, log_enabled, Level};
 fn main() {
     some_init();
     println!("hello world...");
-    cli_app();
+    match cli_app() {
+        Ok(()) => {},
+        Err(err) => {
+            eprintln!("{:?}", err);
+        }
+    }
 }
 
 fn some_init() {
     env_logger::init();
 }
 
+/// 错误类型
+#[derive(Debug)]
+enum MyErr {
+    Reason(String),
+}
+
 /// 命令行应用
 /// 实现命令行下 KV 数据库的交互，支持 set/get/rm 操作
-fn cli_app() {
+fn cli_app() ->Result<(), MyErr> {
     let matches = App::new("kvs")
         .version("0.1.0")
         .author("SamuelSu<suhanyujie@qq.com>")
@@ -31,12 +42,14 @@ fn cli_app() {
                 .about("Set one value with key")
                 .arg(
                     Arg::with_name("key")
+                        .index(1)
                         .short("k")
                         .required(true)
                         .help("Type the key"),
                 )
                 .arg(
                     Arg::with_name("value")
+                        .index(2)
                         .short("v")
                         .required(true)
                         .help("type the value"),
@@ -54,12 +67,19 @@ fn cli_app() {
         .get_matches();
 
     match matches.subcommand() {
-        ("set", Some(set)) => {
-            let ext_args: Vec<&str> = set.values_of("set").unwrap().collect();
-            println!("{:?}", ext_args);
+        ("set", Some(set_cmd)) => {
+            let key = set_cmd.value_of("key");
+            let value = set_cmd.value_of("key");
+            if key.is_none() || value.is_none() {
+                return Err(MyErr::Reason("请输入合适的 set 的键和值。".into()));
+            }
+            dbg!(set_cmd.value_of("key"));
+            dbg!(set_cmd.value_of("value"));
+            // println!("{:?}", ext_args);
         }
-        ("get", Some(get)) => {}
-        ("rm", Some(rm)) => {}
+        ("get", Some(_get_cmd)) => {}
+        ("rm", Some(_rm_cmd)) => {}
         _ => {}
     }
+    Ok(())
 }
