@@ -5,7 +5,7 @@ use log::{debug, error, info, log_enabled, Level};
 /// 命令行方式使用 kvs
 fn main() {
     some_init();
-    println!("hello world...");
+    info!("[kvs] start...");
     match cli_app() {
         Ok(()) => {},
         Err(err) => {

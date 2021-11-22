@@ -1,11 +1,14 @@
 //! 通过 [indexmap](https://github.com/bluss/indexmap) 实现简单的 KV 数据库
 //! 为了防止 data race，将 IndexMap 用 Arc 进行包装
+//! 具体实现可以参考：https://github.com/pingcap/talent-plan/blob/master/courses/rust/projects/project-2/src/kv.rs
 
 use super::util::HandyRwLock;
 use indexmap::IndexMap;
-use std::sync::{Arc, RwLock};
+use std::{path::PathBuf, sync::{Arc, RwLock}};
 
+/// 键值对存储在日志文件中 todo
 struct KVStore {
+    path:PathBuf,
     inner: Arc<RwLock<IndexMap<Vec<u8>, Vec<u8>>>>,
 }
 
