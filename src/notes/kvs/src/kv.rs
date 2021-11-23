@@ -75,6 +75,8 @@ mod tests {
 }
 
 /*
+>* 资料来源：https://github.com/pingcap/talent-plan/blob/master/courses/rust/projects/project-2/README.md#project-spec
+
 ### 错误处理
 In this project it will be possible for the code to fail due to I/O errors.
 So before we get started implementing a database we need to do one more thing that is crucial to Rust projects:
