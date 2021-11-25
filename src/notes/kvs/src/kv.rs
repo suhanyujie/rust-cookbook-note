@@ -77,7 +77,7 @@ mod tests {
 /*
 >* 资料来源：https://github.com/pingcap/talent-plan/blob/master/courses/rust/projects/project-2/README.md#project-spec
 
-### 错误处理
+### 部分 1：错误处理
 在这个项目中，I/O 错误会导致代码执行失败。因此，在完全实现数据库之前，我们还需要确定一件
 至关重要的事：错误处理策略。
 
@@ -101,5 +101,51 @@ failure 库的指南中描述了几种错误处理模式。
 注意：Rust 中的“错误处理”仍在发展和改进中。本课程目前使用 failure 库定义错误类型更容易。虽然 failure 设计不错，但它的使用不是最佳实践。Rust 专家可能会开发出更好的错误处理方式。
 在后面的课程中有可能不会一直使用 failure。于此同时，它也是一个不错的选择，它能用于学习 Rust 错误处理的演进以及优化。
 
+### 部分 2：log 的作用和原理
+Now we are finally going to begin implementing the beginnings of a real database by reading and writing from disk. You will use serde to serialize the "set" and "rm" commands to a string, and the standard file I/O APIs to write it to disk.
+> 现在无码终于要开始通过从磁盘读写来实现一个真正的数据库。我们将使用 serde 来把 "set" 和 "rm" 指令序列化为字符串，然后用标准的文件 I/O 接口来写到硬盘上。
+
+下面这些是 kvs 最基本的日志行文：
+
+* "set"
+    * 用户调用 kvs 进行 set mykey myvalue
+    * kvs 创建 set 指令包含的值，其中有 key 和 value
+    * 然后，程序将指令序列化为字符串
+    * 然后，把序列化的指令追加到日志文件中
+    * 如果成功了，则以错误码 0 静默地退出
+    * 如果失败了，就打印错误，并返回非 0 地错误代码并退出
+
+* "get"
+    * 用户调用 kvs 指令：get mykey
+    * kvs reads the entire log, one command at a time, recording the affected key and file offset of the command to an in-memory key -> log pointer map
+    * kvs 每次读取一个指令，将受影响地 key 和文件偏移量记录到内存的 map 中，即 key -> 日志指针
+    * 然后，检查 map 中的日志指针
+    * 如果失败，则打印“Key not found”，并以代码 0 退出
+    * 如果成功
+    * 它将指令日志反序列化得到最后的记录中的 key 和值
+    * 然后将结果打印到标准输出，并以代码 0 退出
+
+* "rm"
+    * 用户调用 kvs 的指令 rm mykey
+    * Same as the "get" command, kvs reads the entire log to build the in-memory index
+    * 和 get 指令一样，kvs 读取整个日志来在内存中构建索引
+    * 然后，它检查 map 中是否存在给定的 key
+    * 如果不存在，就返回“Key not found”
+    * 如果成功
+    * 将会创建对应的 rm 指令，其中包含了 key
+    * 然后将指令序列化追加到日志中
+    * 如果成功，则以错误码 0 静默退出
+
+The log is a record of the transactions committed to the database. By "replaying" the records in the log on startup we reconstruct the previous state of the database.
+> 日志是提交到数据库的事务记录。通过在启动时，“重建”（replaying）日志中的记录，我们就可以重现数据库之前的状态。
+
+In this iteration you may store the value of the keys directly in memory (and thus never read from the log after initial startup and log replay). In a future iteration you will store only "log pointers" (file offsets) into the log.
+> 在这个迭代中，你可以将键的值直接存储在内存中（因此在重启或重建时是不会从日志中读取内容的）。在后面的迭代中，只需将日志指针（文件偏移量）存储到日志中。
+
+### 部分 3：log 的写入
+### 部分 4：log 的读取
+### 部分 5：在索引中存储 log 的指针
+### 部分 6：KvStore 的有状态和无状态
+### 部分 7：log 的压缩
 
 */
