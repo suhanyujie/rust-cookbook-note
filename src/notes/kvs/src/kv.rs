@@ -153,16 +153,20 @@ You need to pick a serialization format. Think about the properties you want in 
 > 你需要选择一种序列化格式。并确定你需要的属性 —— 你是否需要性能优先？你你希望以纯文本形式读取日志内容吗？这都在于你如何配置，但你记得在代码中写好注释。
 
 Other things to consider include: where is the system performing buffering and where do you need buffering? What is the impact of buffering on subsequent reads? When should you open and close file handles? For each command? For the lifetime of the `KvStore`?
-> 还有其他因素要考虑一下：系统在哪设置缓冲，以及哪些地方需要？缓冲后续的影响是什么？何时打开和关闭文件句柄？有哪些支持的命令？`KvStore` 的声明周期是什么？
+> 还有其他因素要考虑一下：系统在哪设置缓冲，以及哪些地方需要？缓冲后续的影响是什么？何时打开和关闭文件句柄？有哪些支持的命令？`KvStore` 的生命周期是什么？
 
 Some of the APIs you will call may fail, and return a `Result` of some error type. Make sure that your calling functions return a `Result` of your own error type, and that you convert between the two with `?`.
+> 你调用的一些 api 可能会失败，并返回错误类型的 `Result`。你需要确保调用函数会返回你自己设定的错误类型的 `Result`，并用 `?` 向上传递。
 
 It is similar to implementing the "rm" command, but you should additionally check if the key exists before writing the command to the log. As we have two different commands that must be distinguished, you may use variants of a single enum type to represent each command. `serde` just works perfectly with enums.
+> 类似于 rm 命令，我们希望在把命令写入日志之前，还要检查 key 是否存在。因为两种情况下的命令需要区分开，所以可以使用 enum 类型的变体来统一所有命令。`serde` 可以完美地与枚举一起使用。
 
 You may implement the "set" and "rm" commands now, focusing on the `set` / `rm` test cases, or you can proceed to the next section to read about the "get" command. It may help to keep both in mind, or to implement them both simultaneously. It is your choice.
+> 你现在可以实现 set 和 rm 命令了，重点放在 set / rm 对应的测试用例上，也可以阅读下一节的 get 命令实现。记住这两个命令并加以实现，会对你很有帮助。选择权在你。
 
 ### 部分 4：log 的读取
 Now it's time to implement "get". In this part, you don't need to store log pointers in the index, we will leave the work to the next part. Instead, just read each command in the log on startup, executing them to save every key and value in the memory. Then read from the memory.
+> 现在该实现 get 了。在这一部分中，你不需要把日志指针存储在索引中，而将其放到下一节进行实现。这一节我们只需在启动时，读取日志中的所有命令，执行它们将每个键值对保存在内存中。然后根据需要从内存中读取。
 
 Should you read all records in the log into memory at once and then replay them into your map type; or should you read them one at a time while replaying them into your map? Should you read into a buffer before deserializing or deserialize from a file stream? Think about the memory usage of your approach. Think about the way reading from I/O streams interacts with the kernel.
 
