@@ -172,8 +172,10 @@ Should you read all records in the log into memory at once and then replay them 
 > 应该一次性把日志内容全部读取到内存中替换已存在的 map 吗？；应该在某个时候读取一条从而重现 map 中的某条数据？应该在序列化、反序列化之前将其从文件系统中读取到 buffer 中吗？想想你使用内存的方式。考虑一下与内核交互是从 I/O 流 读取数据。
 
 Remember that "get" may not find a value and that case has to be handled specially. Here, our API returns `None` and our command line client prints a particular message and exits with a zero exit code.
+> 记住，"get" 可能获取不到值，这种情况下，需要特殊处理。这里，我们的 API 返回 `None`，然后客户端打印一个特定的消息，并以零代码退出。
 
 There's one complication to reading the log, and you may have already considered it while writing the "set" code: how do you distinguish between each record in the log? That is, how do you know when to stop reading one record, and start reading the next? Do you even need to? Maybe serde will deserialize a record directly from an I/O stream and stop reading when it's done, leaving the file cursor in the correct place to read subsequent records. Maybe serde will report an error when it sees two records back-to-back. Maybe you need to insert additional information to distinguish the length of each record. Maybe not.
+> 读取日志比较复杂，你在编写 set 时，可能已经想到了：如何区分日志中的记录？也就是说，如何终止读取，何时开始读取下一条记录？需要这样实现吗？也许 serde 将直接从 I/O 流中发序列化一条记录，并在操作完后停止读取，将游标停留在正确的位置，以便读取后续的记录。也许 serde 在检查到两条背靠背（back-to-back）时会报错。也许你需要插入额外的信息来区分每个记录的长度，也有可能有其他方式。
 
 _Implement "get" now._
 
