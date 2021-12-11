@@ -180,6 +180,15 @@ There's one complication to reading the log, and you may have already considered
 _Implement "get" now._
 
 ### 部分 5：在索引中存储 log 的指针
+At this point most, if not all (besides the compaction test), other test suite should all pass. The changes introduced in the next steps are simple optimizations, necessary for fast performance and reduced storage. As you implement them, pay attention to what exactly they are optimizing for.
+> 此时，处理压缩数据相关的测试以外，其他测试应该都是通过的。接下来的步骤是一些性能优化和存储优化。当你实现它们时，需要注意它们的意义是什么？
+
+As we've described, the database you are building maintains an in-memory index of all keys in the database. That index maps from string keys to log pointers, not the values themselves.
+
+This change introduces the need to perform reads from the log at arbitrary offsets. Consider how that might impact the way you manage file handles.
+
+If, in the previous steps, you elected to store the string values directly in memory, now is the time to update your code to store log pointers instead, loading from disk on demand.
+
 ### 部分 6：KvStore 的有状态和无状态
 ### 部分 7：log 的压缩
 
