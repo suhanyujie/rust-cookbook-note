@@ -190,6 +190,47 @@ This change introduces the need to perform reads from the log at arbitrary offse
 If, in the previous steps, you elected to store the string values directly in memory, now is the time to update your code to store log pointers instead, loading from disk on demand.
 
 ### 部分 6：KvStore 的有状态和无状态
+Remember that our project is both a library and a command-line program. They have sligtly different requirements: the kvs CLI commits a single change to disk, then exits (it is stateless); the KvStore type commits changes to disk, then stays resident in memory to service future queries (it is stateful).
+> 请记住，我们的项目不仅是一个库，也可作为命令行程序。它们有些不一样：kvs 命令行程序向磁盘提交一个更改，然后就退出了（无状态）；KvStore 会将更改提交到磁盘，然后常驻内存以服务后续的查询（有状态）。
+
+Is your KvStore stateful or stateless?
+> 你的 KvStore 是有状态还是无状态呢？
+
+Make your KvStore retain the index in memory so it doesn't need to re-evaluate it for every call to get.
+> 可以让你的 KvStore 的索引常驻内存中，这样就无需在每次调用时重新执行所有的日志指令。
+
 ### 部分 7：log 的压缩
+At this point the database works just fine, but the log grows indefinitely. That is appropriate for some databases, but not the one we're building — we want to minimize disk usage as much as we can.
+
+So the final step in creating your database is to compact the log. Consider that as the log grows that multiple entries may set the value of a given key. Consider also that only the most recent command that modified a given key has any effect on the current value of that key:
+
+idx | command 
+|:---- |:--- |
+| 0 | ~~Command::Set("key-1", "value-1a")~~  | 
+| 20 | Command::Set("key-2", "value-2") | 
+|   |   ... | 
+| 100  | Command::Set("key-1", "value-1b") | 
+
+In this example obviously the command at index 0 is redundant, so it doesn't need to be stored. Log compaction then is about rebuilding the log to remove redundancy:
+
+idx | command 
+|:---- |:--- |
+| 0 | Command::Set("key-2", "value-2")  | 
+|   |    ...  | 
+| 99  |  Command::Set("key-1", "value-1b") | 
+
+Here's the basic algorithm you will use:
+
+How you re-build the log is up to you. Consider questions like: what is the naive solution? How much memory do you need? What is the minimum amount of copying necessary to compact the log? Can the compaction be done in-place? How do you maintain data-integrity if compaction fails?
+
+So far we've been refering to "the log", but in actuallity it is common for a database to store many logs, in different files. You may find it easier to compact the log if you split your log across files.
+
+Implement log compaction for your database.
+
+Congratulations! You have written a fully-functional database.
+
+If you are curious, now is a good time to start comparing the performance of your key/value store to others, like sled, bitcask, badger, or RocksDB. You might enjoy investigating their architectures, thinking about how theirs compare to yours, and how architecture affects performance. The next few projects will give you opportunities to optimize.
+
+Nice coding, friend. Enjoy a nice break.
 
 */
