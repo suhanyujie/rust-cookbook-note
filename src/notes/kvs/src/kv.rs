@@ -201,8 +201,10 @@ Make your KvStore retain the index in memory so it doesn't need to re-evaluate i
 
 ### 部分 7：log 的压缩
 At this point the database works just fine, but the log grows indefinitely. That is appropriate for some databases, but not the one we're building — we want to minimize disk usage as much as we can.
+> 到这里，数据库运行是正常的，但日志会无限增长。这对其他数据库可能没啥影响，但对于我们正在构建的数据库 —— 我们需要尽量减少磁盘的占用。
 
 So the final step in creating your database is to compact the log. Consider that as the log grows that multiple entries may set the value of a given key. Consider also that only the most recent command that modified a given key has any effect on the current value of that key:
+> 因此，最后一步就是压缩日志了。需要考虑到随着日志的增长，可能有多个指令日志对同一个键操作。还要考虑到，对于同一个键，最近一次的日志的更改才对其有影响：
 
 idx | command 
 |:---- |:--- |
@@ -212,6 +214,7 @@ idx | command
 | 100  | Command::Set("key-1", "value-1b") | 
 
 In this example obviously the command at index 0 is redundant, so it doesn't need to be stored. Log compaction then is about rebuilding the log to remove redundancy:
+> 在这个例子中，索引 0 的日志很明显是冗余的，因此不需要对其存储。日志压缩其实就是重新构建日志并且消除冗余：
 
 idx | command 
 |:---- |:--- |
@@ -220,8 +223,10 @@ idx | command
 | 99  |  Command::Set("key-1", "value-1b") | 
 
 Here's the basic algorithm you will use:
+> 这是基本算法的使用：
 
 How you re-build the log is up to you. Consider questions like: what is the naive solution? How much memory do you need? What is the minimum amount of copying necessary to compact the log? Can the compaction be done in-place? How do you maintain data-integrity if compaction fails?
+> 如何重建日志取决于你。考虑一下这个问题：最直接的方法是什么？需要多少内存？压缩日志所需的最小拷贝量是多少？能实时压缩吗？如果压缩失败，怎样保证数据完整性？
 
 So far we've been refering to "the log", but in actuallity it is common for a database to store many logs, in different files. You may find it easier to compact the log if you split your log across files.
 
