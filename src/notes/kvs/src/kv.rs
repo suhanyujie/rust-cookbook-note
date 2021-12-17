@@ -229,13 +229,18 @@ How you re-build the log is up to you. Consider questions like: what is the naiv
 > 如何重建日志取决于你。考虑一下这个问题：最直接的方法是什么？需要多少内存？压缩日志所需的最小拷贝量是多少？能实时压缩吗？如果压缩失败，怎样保证数据完整性？
 
 So far we've been refering to "the log", but in actuallity it is common for a database to store many logs, in different files. You may find it easier to compact the log if you split your log across files.
+> 到目前为止，我们一直致力于“日志”，但实际上，数据库的数据存储在多个日志文件中是很常见的。如果你将日志拆分到多个文件中，你可能会发现压缩日志更容易。
 
 Implement log compaction for your database.
+> 给数据库实现日志压缩。
 
 Congratulations! You have written a fully-functional database.
+> 恭喜！你已经编写了一个功能齐全的数据库了。
 
 If you are curious, now is a good time to start comparing the performance of your key/value store to others, like sled, bitcask, badger, or RocksDB. You might enjoy investigating their architectures, thinking about how theirs compare to yours, and how architecture affects performance. The next few projects will give you opportunities to optimize.
+> 如果你很好奇，你可以将你实现的数据库的性能与其他数据库（如 sled、bitcask、badger 或 RicksDB）进行性能对比。你可能喜欢研究它们实现的架构，将其与你自己的架构对比，以及架构的不同对性能有何影响。接下来的几个项目将为你提供优化的机会。
 
 Nice coding, friend. Enjoy a nice break.
+> 写的很棒，朋友。可以休息一下了。
 
 */
