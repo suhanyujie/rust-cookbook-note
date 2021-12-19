@@ -102,8 +102,7 @@ failure 库的指南中描述了几种错误处理模式。
 在后面的课程中有可能不会一直使用 `failure`。于此同时，它也是一个不错的选择，它能用于学习 Rust 错误处理的演进以及优化。
 
 ### 部分 2：log 的作用和原理
-Now we are finally going to begin implementing the beginnings of a real database by reading and writing from disk. You will use serde to serialize the "set" and "rm" commands to a string, and the standard file I/O APIs to write it to disk.
-> 现在无码终于要开始通过从磁盘读写来实现一个真正的数据库。我们将使用 [serde](https://serde.rs/) 来把 "set" 和 "rm" 指令序列化为字符串，然后用标准的文件 I/O 接口来写到硬盘上。
+现在我们终于要开始从磁盘读写来实现一个真正的数据库。我们将使用 [serde](https://serde.rs/) 来把 "set" 和 "rm" 指令序列化为字符串，然后用标准的文件 I/O 接口来写到硬盘上。
 
 下面这些是 `kvs` 最基本的日志行文：
 
@@ -117,8 +116,7 @@ Now we are finally going to begin implementing the beginnings of a real database
 
 * "get"
     * 用户调用指令：`kvs get mykey`
-    * kvs reads the entire log, one command at a time, recording the affected key and file offset of the command to an in-memory key -> log pointer map
-    * kvs 每次读取一个指令，将受影响地 key 和文件偏移量记录到内存的 map 中，即 key -> 日志指针
+    * kvs 每次读取一条指令，将相应受影响的 key 和文件偏移量记录到内存的 map 中，即 key -> 日志指针
     * 然后，检查 map 中的日志指针
     * 如果失败，则打印“Key not found”，并以代码 0 退出
     * 如果成功
@@ -127,49 +125,36 @@ Now we are finally going to begin implementing the beginnings of a real database
 
 * "rm"
     * 用户调用指令 `kvs rm mykey`
-    * Same as the "get" command, kvs reads the entire log to build the in-memory index
-    * 和 get 指令一样，kvs 读取整个日志来在内存中构建索引
+    * 和 get 指令一样，kvs 读取整条日志来在内存中构建索引
     * 然后，它检查 map 中是否存在给定的 key
     * 如果不存在，就返回“Key not found”
-    * 如果成功
-    * 将会创建对应的 rm 指令，其中包含了 key
-    * 然后将指令序列化追加到日志中
+    * 如果成功，将会创建对应的 rm 指令，其中包含了 key
+    * 然后将指令序列化后追加到日志中
     * 如果成功，则以错误码 0 静默退出
 
-The log is a record of the transactions committed to the database. By "replaying" the records in the log on startup we reconstruct the previous state of the database.
-> 日志是提交到数据库的事务记录。通过在启动时，“重建”（replaying）日志中的记录，我们就可以重现数据库之前的状态。
+日志是提交到数据库的事务记录。通过在启动时，“重建”（replaying）日志中的记录，我们就可以重现数据库在某个时间点的特定状态。
 
-In this iteration you may store the value of the keys directly in memory (and thus never read from the log after initial startup and log replay). In a future iteration you will store only "log pointers" (file offsets) into the log.
-> 在这个迭代中，你可以将键的值直接存储在内存中（因此在重启或重建时是不会从日志中读取内容的）。在后面的迭代中，只需将日志指针（文件偏移量）存储到日志中。
+在这个迭代中，你可以将键的值直接存储在内存中（因此在重启或重建时是不会从日志中读取内容的）。在后面的迭代中，只需将日志指针（文件偏移量）存储到日志中。
 
 ### 部分 3：log 的写入
-You will start by implementing the "set" flow. There are a number of steps here. Most of them are straightforward to implement and you can verify you've done so by running the appropriate `cli_*` test cases.
-> 我们将从 set 开始。接下来将会有很多步骤。但大部分都比较容易实现，你可以通过运行 `cli_*` 测试用例来验证你的实现。
+我们将从 set 开始。接下来将会有很多步骤。但大部分都比较容易实现，你可以通过运行 `cli_*` 相关测试用例来验证你的实现。
 
-`serde` is a large library, with many options, and supporting many serialization formats. Basic serialization and deserialization only requires annotating your data structure correctly, and calling a function to write it either to a `String` or a stream implementing `Write`.
-> `serde` 是一个大型库，有许多功能选项，支持多种序列化格式。基本的序列化和反序列化只需要对结构体进行合适的注解，然后调用一个函数将序列化后的内容写入 `String` 或者 `Write` 流。
+`serde` 是一个大型库，有许多功能选项，支持多种序列化格式。基本的序列化和反序列化只需要对结构体进行合适的注解，然后调用一个函数将序列化后的内容写入 `String` 或者 `Write` 流。
 
-You need to pick a serialization format. Think about the properties you want in your serialization format — do you want to prioritize performance? Do you want to be able to read the content of the log in plain text? It's your choice, but maybe you should include a comment in the code explaining it.
-> 你需要选择一种序列化格式。并确定你需要的属性 —— 你是否需要性能优先？你你希望以纯文本形式读取日志内容吗？这都在于你如何配置，但你记得在代码中写好注释。
+你需要选择一种序列化格式。并确定你需要的属性 —— 你是否需要性能优先？你希望以纯文本形式读取日志内容吗？这都在于你如何配置，但你记得在代码中写好注释。
 
-Other things to consider include: where is the system performing buffering and where do you need buffering? What is the impact of buffering on subsequent reads? When should you open and close file handles? For each command? For the lifetime of the `KvStore`?
-> 还有其他因素要考虑一下：系统在哪设置缓冲，以及哪些地方需要？缓冲后续的影响是什么？何时打开和关闭文件句柄？有哪些支持的命令？`KvStore` 的生命周期是什么？
+还有其他因素要考虑一下：系统在哪设置缓冲，以及哪些地方需要？缓冲后续的影响是什么？何时打开和关闭文件句柄？有哪些支持的命令？`KvStore` 的生命周期是什么？
 
-Some of the APIs you will call may fail, and return a `Result` of some error type. Make sure that your calling functions return a `Result` of your own error type, and that you convert between the two with `?`.
-> 你调用的一些 api 可能会失败，并返回错误类型的 `Result`。你需要确保调用函数会返回你自己设定的错误类型的 `Result`，并用 `?` 向上传递。
+你调用的一些 api 可能会失败，并返回错误类型的 `Result`。你需要确保调用函数会返回你自己设定的错误类型的 `Result`，并用 `?` 向上传递。
 
-It is similar to implementing the "rm" command, but you should additionally check if the key exists before writing the command to the log. As we have two different commands that must be distinguished, you may use variants of a single enum type to represent each command. `serde` just works perfectly with enums.
-> 类似于 rm 命令，我们希望在把命令写入日志之前，还要检查 key 是否存在。因为两种情况下的命令需要区分开，所以可以使用 enum 类型的变体来统一所有命令。`serde` 可以完美地与枚举一起使用。
+类似于 rm 命令，我们希望在把命令写入日志之前，还要检查 key 是否存在。因为两种场景需要区分开，所以可以使用 enum 类型的变体来统一所有命令。`serde` 可以完美地与枚举一起使用。
 
-You may implement the "set" and "rm" commands now, focusing on the `set` / `rm` test cases, or you can proceed to the next section to read about the "get" command. It may help to keep both in mind, or to implement them both simultaneously. It is your choice.
-> 你现在可以实现 set 和 rm 命令了，重点放在 set / rm 对应的测试用例上，也可以阅读下一节的 get 命令实现。记住这两个命令并加以实现，会对你很有帮助。选择权在你。
+你现在可以实现 set 和 rm 命令了，重点放在 set / rm 对应的测试用例上，也可以阅读下一节的 get 命令实现。记住这两个命令并加以实现，会对你很有帮助。选择权在你。
 
 ### 部分 4：log 的读取
-Now it's time to implement "get". In this part, you don't need to store log pointers in the index, we will leave the work to the next part. Instead, just read each command in the log on startup, executing them to save every key and value in the memory. Then read from the memory.
-> 现在该实现 get 了。在这一部分中，你不需要把日志指针存储在索引中，而将其放到下一节进行实现。这一节我们只需在启动时，读取日志中的所有命令，执行它们将每个键值对保存在内存中。然后根据需要从内存中读取。
+现在该实现 get 了。在这一部分中，你不需要把日志指针存储在索引中，而将其放到下一节进行实现。这一节我们只需在启动时，读取日志中的所有命令，执行它们将每个键值对保存在内存中。然后根据需要从内存中读取。
 
-Should you read all records in the log into memory at once and then replay them into your map type; or should you read them one at a time while replaying them into your map? Should you read into a buffer before deserializing or deserialize from a file stream? Think about the memory usage of your approach. Think about the way reading from I/O streams interacts with the kernel.
-> 应该一次性把日志内容全部读取到内存中替换已存在的 map 吗？；应该在某个时候读取一条从而重现 map 中的某条数据？应该在序列化、反序列化之前将其从文件系统中读取到 buffer 中吗？想想你使用内存的方式。考虑一下与内核交互是从 I/O 流 读取数据。
+应该一次性把日志内容全部读取到内存中并通过 map 类型来重现数据吗；需要在某个时候读取一条日志从而重现 map 中的某条数据吗？应该在序列化、反序列化之前将其从文件系统中读取到 buffer 中吗？想想你使用内存的方式。考虑一下与内核交互是否是从 I/O 流读取数据。
 
 Remember that "get" may not find a value and that case has to be handled specially. Here, our API returns `None` and our command line client prints a particular message and exits with a zero exit code.
 > 记住，"get" 可能获取不到值，这种情况下，需要特殊处理。这里，我们的 API 返回 `None`，然后客户端打印一个特定的消息，并以零代码退出。
