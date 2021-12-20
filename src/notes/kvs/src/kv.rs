@@ -156,59 +156,49 @@ failure 库的指南中描述了几种错误处理模式。
 
 应该一次性把日志内容全部读取到内存中并通过 map 类型来重现数据吗；需要在某个时候读取一条日志从而重现 map 中的某条数据吗？应该在序列化、反序列化之前将其从文件系统中读取到 buffer 中吗？想想你使用内存的方式。考虑一下与内核交互是否是从 I/O 流读取数据。
 
-Remember that "get" may not find a value and that case has to be handled specially. Here, our API returns `None` and our command line client prints a particular message and exits with a zero exit code.
-> 记住，"get" 可能获取不到值，这种情况下，需要特殊处理。这里，我们的 API 返回 `None`，然后客户端打印一个特定的消息，并以零代码退出。
+ 记住，"get" 可能获取不到值，这种情况下，需要特殊处理。这里，我们的 API 返回 `None`，然后客户端打印一个特定的消息，并以零代码退出。
 
-There's one complication to reading the log, and you may have already considered it while writing the "set" code: how do you distinguish between each record in the log? That is, how do you know when to stop reading one record, and start reading the next? Do you even need to? Maybe serde will deserialize a record directly from an I/O stream and stop reading when it's done, leaving the file cursor in the correct place to read subsequent records. Maybe serde will report an error when it sees two records back-to-back. Maybe you need to insert additional information to distinguish the length of each record. Maybe not.
-> 读取日志比较复杂，你在编写 set 时，可能已经想到了：如何区分日志中的记录？也就是说，如何终止读取，何时开始读取下一条记录？需要这样实现吗？也许 serde 将直接从 I/O 流中发序列化一条记录，并在操作完后停止读取，将游标停留在正确的位置，以便读取后续的记录。也许 serde 在检查到两条背靠背（back-to-back）时会报错。也许你需要插入额外的信息来区分每个记录的长度，也有可能有其他方式。
+读取日志有一个复杂点，你在编写 set 时，可能已经想到了：如何区分日志中的记录？也就是说，如何终止读取，何时开始读取下一条记录？需要这样实现吗？也许 serde 将直接从 I/O 流中序列化一条记录，并在操作完后停止读取，将游标停留在正确的位置，以便读取后续的记录。也许 serde 在检查到两条背靠背（back-to-back）的记录时会报错。也许你需要插入额外的信息来区分每个记录的长度，也有可能有其他方式。
 
-_Implement "get" now._
+_现在要实现 “get” 了_
 
 ### 部分 5：在索引中存储 log 的指针
-At this point most, if not all (besides the compaction test), other test suite should all pass. The changes introduced in the next steps are simple optimizations, necessary for fast performance and reduced storage. As you implement them, pay attention to what exactly they are optimizing for.
-> 此时，处理压缩数据相关的测试以外，其他测试应该都是通过的。接下来的步骤是一些性能优化和存储优化。当你实现它们时，需要注意它们的意义是什么？
+此时，除压缩数据相关的测试以外，其他测试应该都是通过的。接下来的步骤是一些性能优化和存储优化。当你实现它们时，需要注意它们的意义是什么？
 
-As we've described, the database you are building maintains an in-memory index of all keys in the database. That index maps from string keys to log pointers, not the values themselves.
+正如我们前面描述的那样，我们所实现的数据库是在内存中维护所有的 key 索引。这个索引映射到字符串指针（值内容），而非 key 本身的内容。
 
-This change introduces the need to perform reads from the log at arbitrary offsets. Consider how that might impact the way you manage file handles.
+这个更改就需要我们可以从任意偏移量处读取日志。想一想，这将怎样影响我们对文件的处理。
 
-If, in the previous steps, you elected to store the string values directly in memory, now is the time to update your code to store log pointers instead, loading from disk on demand.
+如果在前面的步骤中，你选择将字符串直接存在内存中，那现在需要调整代码为存储日志指针的方式，并根据需要从磁盘中加载内容。
 
 ### 部分 6：KvStore 的有状态和无状态
-Remember that our project is both a library and a command-line program. They have sligtly different requirements: the kvs CLI commits a single change to disk, then exits (it is stateless); the KvStore type commits changes to disk, then stays resident in memory to service future queries (it is stateful).
-> 请记住，我们的项目不仅是一个库，也可作为命令行程序。它们有些不一样：kvs 命令行程序向磁盘提交一个更改，然后就退出了（无状态）；KvStore 会将更改提交到磁盘，然后常驻内存以服务后续的查询（有状态）。
+请记住，我们的项目不仅是一个库，也可作为命令行程序。它们有些不一样：kvs 命令行程序向磁盘提交一个更改，然后就退出了（无状态）；KvStore 会将更改提交到磁盘，然后常驻内存以服务后续的查询（有状态）。
 
-Is your KvStore stateful or stateless?
-> 你的 KvStore 是有状态还是无状态呢？
+你的 KvStore 是有状态还是无状态呢？
 
-Make your KvStore retain the index in memory so it doesn't need to re-evaluate it for every call to get.
-> 可以让你的 KvStore 的索引常驻内存中，这样就无需在每次调用时重新执行所有的日志指令。
+可以让你的 KvStore 的索引常驻内存中，这样就无需在每次调用时重新执行所有的日志指令。
 
 ### 部分 7：log 的压缩
-At this point the database works just fine, but the log grows indefinitely. That is appropriate for some databases, but not the one we're building — we want to minimize disk usage as much as we can.
-> 到这里，数据库运行是正常的，但日志会无限增长。这对其他数据库可能没啥影响，但对于我们正在构建的数据库 —— 我们需要尽量减少磁盘的占用。
+到这里，数据库运行是正常的，但日志会无限增长。这对其他数据库可能没啥影响，但对于我们正在构建的数据库 —— 我们需要尽量减少磁盘的占用。
 
-So the final step in creating your database is to compact the log. Consider that as the log grows that multiple entries may set the value of a given key. Consider also that only the most recent command that modified a given key has any effect on the current value of that key:
-> 因此，最后一步就是压缩日志了。需要考虑到随着日志的增长，可能有多个指令日志对同一个键操作。还要考虑到，对于同一个键，最近一次的日志的更改才对其有影响：
+因此，最后一步就是压缩日志了。需要考虑到随着日志的增长，可能有多个指令日志对同一个键操作。还要考虑到，对于同一个键，只有最近一次的日志的更改才对其值有影响：
 
-idx | command 
+索引序号 | 指令 
 |:---- |:--- |
 | 0 | ~~Command::Set("key-1", "value-1a")~~  | 
 | 20 | Command::Set("key-2", "value-2") | 
 |   |   ... | 
 | 100  | Command::Set("key-1", "value-1b") | 
 
-In this example obviously the command at index 0 is redundant, so it doesn't need to be stored. Log compaction then is about rebuilding the log to remove redundancy:
-> 在这个例子中，索引 0 的日志很明显是冗余的，因此不需要对其存储。日志压缩其实就是重新构建日志并且消除冗余：
+在这个例子中，索引 0 的日志很明显是冗余的，因此不需要对其存储。日志压缩其实就是重新构建日志并且消除冗余：
 
-idx | command 
+索引序号 | 指令 
 |:---- |:--- |
 | 0 | Command::Set("key-2", "value-2")  | 
 |   |    ...  | 
 | 99  |  Command::Set("key-1", "value-1b") | 
 
-Here's the basic algorithm you will use:
-> 这是基本算法的使用：
+这是基本的压缩算法的使用：
 
 How you re-build the log is up to you. Consider questions like: what is the naive solution? How much memory do you need? What is the minimum amount of copying necessary to compact the log? Can the compaction be done in-place? How do you maintain data-integrity if compaction fails?
 > 如何重建日志取决于你。考虑一下这个问题：最直接的方法是什么？需要多少内存？压缩日志所需的最小拷贝量是多少？能实时压缩吗？如果压缩失败，怎样保证数据完整性？
