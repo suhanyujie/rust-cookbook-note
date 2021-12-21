@@ -1,18 +1,20 @@
 use std::convert::AsRef;
 
 fn main() {
-    demo1_1();
+    // demo0_1();
+    demo0_3();
+
+    // demo1();
+    // demo1_1();
+    // demo1_2();
 }
 
 fn demo1() {
-    // let s1 = String::from("hello");
+    let s1 = String::from("hello");
+    // bad case
     // let s2: &String = s1.as_ref();
-    // println!("{:?}", s2);
-}
-
-fn demo1_1() {
-    let s1 = MyStr(String::from("hello"));
-    let s2 = s1.as_ref();
+    // good case
+    let s2 = &s1;
     println!("{:?}", s2);
 }
 
@@ -24,25 +26,64 @@ impl AsRef<str> for MyStr {
     }
 }
 
+fn demo1_1() {
+    let s1 = MyStr(String::from("hello"));
+    let s2 = s1.as_ref();
+    println!("{:?}", s2);
+}
+
+fn demo1_2() {
+    let s1 = "hello world";
+    let s2: &str = s1.as_ref();
+    println!("{:?}", s2);
+}
+
+
 fn demo0() {
-    // let option_name: Option<String> = Some("Alice".to_owned());
-    // match option_name {
-    //     Some(name) => println!("Name is {}", name),
-    //     None => println!("No name provided"),
-    // }
-    // println!("{:?}", option_name);
+    let option_name: Option<String> = Some("Alice".to_owned());
+    match option_name {
+        Some(name) => println!("Name is {}", name),
+        None => println!("No name provided"),
+    }
+}
+
+fn demo0_1() {
+    let option_name: Option<String> = Some("Alice".to_owned());
+    match option_name {
+        Some(ref name) => println!("Name is {}", name),
+        None => println!("No name provided"),
+    }
+}
+
+fn demo0_2() {
+    let option_name: Option<String> = Some("Alice".to_owned());
+    match option_name.as_ref() {
+        Some(name) => println!("Name is {}", name),
+        None => println!("No name provided"),
+    }
+}
+
+fn demo0_3() {
+    let option_name: Option<String> = Some("Alice".to_owned());
+    match &option_name {
+        Some(name) => println!("Name is {}", name),
+        None => println!("No name provided"),
+    }
+    println!("{:?}", option_name);
 }
 
 /*
 # Rust's as_ref vs as_deref
 >* 作者：[suhanyujie](https://github.com/suhanyujie)
 >* 来源：https://github.com/suhanyujie/rust-cookbook-note
+>* 深度参考：https://www.fpcomplete.com/blog/rust-asref-asderef/
 >* tags：Rust，as_ref，deref
 >* tips：如有不当之处，还请指正~
 
 今日在网上看到一段[代码](https://www.fpcomplete.com/blog/rust-asref-asderef/)：
 
 ```rust
+// can't compile
 fn main() {
     let option_name: Option<String> = Some("Alice".to_owned());
     match option_name {
@@ -95,8 +136,62 @@ error[E0277]: the trait bound `String: AsRef<String>` is not satisfied
 error: aborting due to previous error
 ```
 
+原因是 String 类型没有实现 AsRef Trait，因而不能调用 as_ref() 方法。不过发现编译器为 `OsStr`、`Path`、`[u8]`、`str` 类型实现了 AsRef Trait。因此，同样的代码发生在 str 上，则可以通过编译：
 
+```rust
+fn demo1_2() {
+    let s1 = "hello world";
+    let s2: &str = s1.as_ref();
+    println!("{:?}", s2); // hello world
+}
+```
 
+与此同时，如果你声明了一个类型，并为其实现了 AsRef，则也能调用 as_ref() 方法。
+
+```rust
+struct MyStr(String);
+
+impl AsRef<str> for MyStr {
+    fn as_ref(&self) -> &str {
+        return &self.0;
+    }
+}
+
+fn demo1_1() {
+    let s1 = MyStr(String::from("hello"));
+    let s2 = s1.as_ref();
+    println!("{:?}", s2);
+}
+```
+
+回到文章一开始提到的例子，为了能让其通过编译，我们需要调整一下，在 match 时，增加引用符号 —— `&`：
+
+```
+fn main() {
+    let option_name: Option<String> = Some("Alice".to_owned());
+    match &option_name {
+        Some(name) => println!("Name is {}", name),
+        None => println!("No name provided"),
+    }
+    println!("{:?}", option_name);
+}
+```
+
+上面这段代码在 RFC 2005 "match ergonomics" landed in 2016 实现之前，是无法编译的。而需要这样写才能通过编译：
+
+```rust
+fn main() {
+    let option_name: Option<String> = Some("Alice".to_owned());
+    match &option_name {
+        &Some(ref name) => println!("Name is {}", name),
+        &None => println!("No name provided"),
+    }
+    println!("{:?}", option_name);
+}
+```
+
+这样，类型就非常明确了，我们 match 的是 `&Option<String>` 类型，在 `&Some` 分支中，要表示借用，我们需要引入 `ref` 关键字。
+重要的是，这些繁琐的东西不再需要了。RFC 2005 的实现，使 match Option 使用起来更加便捷。
 
 
 
