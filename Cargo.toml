@@ -12,3 +12,13 @@ clap = "2.33.0"
 ansi_term = "0.12.1"
 lazy_static = "1.4.0"
 chrono = "0.4.13"
+
+[workspace]
+members = [
+    "cookbooktest",
+    "toml2json"
+]
+
+exclude = [
+    "src/notes/kvs"
+]

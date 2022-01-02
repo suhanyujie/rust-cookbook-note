@@ -13,3 +13,4 @@ Rust 中把数据持久化的一种方式是通过 [bincode crate](https://docs.
 mod kv;
 mod util;
 mod storage;
+mod error;

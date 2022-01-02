@@ -1,6 +1,8 @@
 # 构建 HA 的 KV 数据库
 最近打算用 Rust 做个练习 —— 从零实现一个 KV 数据库。深度参考 [mum](https://github.com/dyxushuai/mum)，而 mum 又是 [talent-plan](https://github.com/pingcap/talent-plan/blob/master/courses/dss/raft/README.md) 的一个课程的实现。
 
+该仓库独立于 cookbook，因此，在 cookbook crate 的 toml 中声明 workspace.exclude
+
 ## todo
 * [*] 实现简单的 KV 存储
 * [ ] 日志

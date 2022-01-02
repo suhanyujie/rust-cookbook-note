@@ -35,6 +35,7 @@ impl KVStore {
     fn from_map(m: IndexMap<Vec<u8>, Vec<u8>>) -> Self {
         KVStore {
             inner: Arc::new(RwLock::new(m)),
+            path: todo!(),
         }
     }
 
@@ -183,20 +184,20 @@ _现在要实现 “get” 了_
 
 因此，最后一步就是压缩日志了。需要考虑到随着日志的增长，可能有多个指令日志对同一个键操作。还要考虑到，对于同一个键，只有最近一次的日志的更改才对其值有影响：
 
-索引序号 | 指令 
+索引序号 | 指令
 |:---- |:--- |
-| 0 | ~~Command::Set("key-1", "value-1a")~~  | 
-| 20 | Command::Set("key-2", "value-2") | 
-|   |   ... | 
-| 100  | Command::Set("key-1", "value-1b") | 
+| 0 | ~~Command::Set("key-1", "value-1a")~~  |
+| 20 | Command::Set("key-2", "value-2") |
+|   |   ... |
+| 100  | Command::Set("key-1", "value-1b") |
 
 在这个例子中，索引 0 的日志很明显是冗余的，因此不需要对其存储。日志压缩其实就是重新构建日志并且消除冗余：
 
-索引序号 | 指令 
+索引序号 | 指令
 |:---- |:--- |
-| 0 | Command::Set("key-2", "value-2")  | 
-|   |    ...  | 
-| 99  |  Command::Set("key-1", "value-1b") | 
+| 0 | Command::Set("key-2", "value-2")  |
+|   |    ...  |
+| 99  |  Command::Set("key-1", "value-1b") |
 
 这是基本的压缩算法的使用：
 
