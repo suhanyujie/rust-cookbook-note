@@ -1,4 +1,3 @@
-
 use bincode::serialize_into;
 use crc::crc32;
 use protobuf::Message;

@@ -7,7 +7,7 @@ fn main() {
     some_init();
     info!("[kvs] start...");
     match cli_app() {
-        Ok(()) => {},
+        Ok(()) => {}
         Err(err) => {
             eprintln!("{:?}", err);
         }
@@ -26,7 +26,7 @@ enum MyErr {
 
 /// 命令行应用
 /// 实现命令行下 KV 数据库的交互，支持 set/get/rm 操作
-fn cli_app() ->Result<(), MyErr> {
+fn cli_app() -> Result<(), MyErr> {
     let matches = App::new("kvs")
         .version("0.1.0")
         .author("SamuelSu<suhanyujie@qq.com>")

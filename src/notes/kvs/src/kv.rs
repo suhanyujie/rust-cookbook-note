@@ -3,9 +3,15 @@
 //! 具体实现可以参考：https://github.com/pingcap/talent-plan/blob/master/courses/rust/projects/project-2/src/kv.rs
 
 use super::util::HandyRwLock;
+use crate::{KvsError, Result};
 use indexmap::IndexMap;
 use std::{
-    path::PathBuf,
+    collections::{BTreeMap, HashMap},
+    ffi::OsStr,
+    fs::File,
+    io::{BufReader, Read, Seek, SeekFrom},
+    ops::Range,
+    path::{Path, PathBuf},
     sync::{Arc, RwLock},
 };
 
@@ -24,19 +30,100 @@ struct KVStore {
     /// 对于 CLI，使用 KVStore 类型将加载索引，执行命令，然后退出；对于库使用，它将加载索引，然后执行多个命令，维护索引状态，直到它被删除。
     /// ref: https://github.com/pingcap/talent-plan/blob/master/courses/rust/projects/project-2/README.md#project-spec
     path: PathBuf,
+
+    readers: HashMap<u64, BufReaderWithPos<File>>,
     inner: Arc<RwLock<IndexMap<Vec<u8>, Vec<u8>>>>,
 }
 
-impl KVStore {
-    fn new() -> Self {
-        KVStore::from_map(IndexMap::new())
-    }
+struct BufReaderWithPos<R: Read + Seek> {
+    reader: BufReader<R>,
+    pos: u64,
+}
 
-    fn from_map(m: IndexMap<Vec<u8>, Vec<u8>>) -> Self {
-        KVStore {
-            inner: Arc::new(RwLock::new(m)),
-            path: todo!(),
+impl<R: Read + Seek> BufReaderWithPos<R> {
+    fn new(mut inner: R) -> Result<Self> {
+        let pos = inner.seek(SeekFrom::Current(0))?;
+        Ok(BufReaderWithPos {
+            reader: BufReader::new(inner),
+            pos,
+        })
+    }
+}
+
+// 将目录中的文件列表按名字进行排序，以便得到有序的日志文件列表
+fn sorted_gen_list(path: PathBuf) -> Result<Vec<u64>> {
+    let mut gen_list: Vec<u64> = std::fs::read_dir(&path)?
+        .flat_map(|res| -> Result<_> { Ok(res?.path()) })
+        .filter(|path| path.is_file() && path.extension() == Some("log".as_ref()))
+        .flat_map(|path| {
+            path.file_name()
+                .and_then(OsStr::to_str)
+                .map(|s| s.trim_end_matches(".log"))
+                .map(str::parse::<u64>)
+        })
+        .flatten()
+        .collect();
+    gen_list.sort_unstable();
+    Ok(gen_list)
+}
+
+fn log_path(dir: &Path, gen: u64) -> PathBuf {
+    dir.join(format!("{}.log", gen))
+}
+
+/// 通过文件序号，从对应的文件中读取指令并将其加载到内存中（BTreeMap）
+fn load(
+    gen: u64,
+    reader: BufReaderWithPos<File>,
+    index: &mut BTreeMap<String, CommandPos>,
+) -> Result<u64> {
+    todo!()
+}
+
+/// 命令位置
+struct CommandPos {
+    gen: u64,
+    pos: u64,
+    len: u64,
+}
+
+impl From<(u64, Range<u64>)> for CommandPos {
+    fn from((gen, range): (u64, Range<u64>)) -> Self {
+        CommandPos {
+            gen,
+            pos: range.start,
+            len: range.end - range.start,
         }
+    }
+}
+
+impl KVStore {
+    // fn new() -> Self {
+    //     KVStore::from_map(IndexMap::new())
+    // }
+
+    fn open(path: impl Into<PathBuf>) -> Result<Self> {
+        // 打开目录，查看目录中的日志文件列表，将其加载进 kvs
+        let path = path.into();
+        std::fs::create_dir_all(&path);
+        let mut readers = HashMap::new();
+        // 索引以 btree map 的形式存储在内存中
+        let mut index = BTreeMap::new();
+        let gen_list = sorted_gen_list(&path)?;
+        let uncompacted = 0;
+        for &gen in &gen_list {
+            let mut reader = BufReaderWithPos::new(File::open(log_path(&path, gen))?)?;
+            uncompacted += load(gen, &mut reader, &mut index)?;
+            readers.insert(gen, reader);
+        }
+
+        let current_gen = gen_list.last().unwrap_or(&0) + 1;
+
+        Ok(KVStore {
+            inner: Arc::new(RwLock::new()),
+            path: PathBuf::from("./data"),
+            readers: BufReaderWithPos::new(File::open()),
+        })
     }
 
     fn set(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>> {
@@ -62,7 +149,7 @@ mod tests {
         let cache_key: Vec<u8> = "org_1001_info".as_bytes().into();
         st.set(cache_key.clone(), "hello org".as_bytes().into());
         assert_eq!(st.get(&cache_key), Some("hello org".as_bytes().into()));
-        assert!(false);
+        // assert!(false);
     }
 
     #[test]
