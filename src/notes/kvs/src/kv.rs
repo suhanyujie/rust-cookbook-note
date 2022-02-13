@@ -98,9 +98,14 @@ impl From<(u64, Range<u64>)> for CommandPos {
 }
 
 impl KVStore {
-    // fn new() -> Self {
-    //     KVStore::from_map(IndexMap::new())
-    // }
+    fn new() -> Self {
+        // KVStore::from_map(IndexMap::new())
+        KVStore{
+            path: todo!(),
+            readers: todo!(),
+            inner: todo!(),
+        }
+    }
 
     fn open(path: impl Into<PathBuf>) -> Result<Self> {
         // 打开目录，查看目录中的日志文件列表，将其加载进 kvs
@@ -108,21 +113,21 @@ impl KVStore {
         std::fs::create_dir_all(&path);
         let mut readers = HashMap::new();
         // 索引以 btree map 的形式存储在内存中
-        let mut index = BTreeMap::new();
-        let gen_list = sorted_gen_list(&path)?;
+        let mut index: BTreeMap<String, CommandPos> = BTreeMap::new();
+        let gen_list = sorted_gen_list(path.clone())?;
         let uncompacted = 0;
         for &gen in &gen_list {
             let mut reader = BufReaderWithPos::new(File::open(log_path(&path, gen))?)?;
-            uncompacted += load(gen, &mut reader, &mut index)?;
+            uncompacted += load(gen, reader, &mut index)?;
             readers.insert(gen, reader);
         }
 
         let current_gen = gen_list.last().unwrap_or(&0) + 1;
 
         Ok(KVStore {
-            inner: Arc::new(RwLock::new()),
+            inner: Arc::new(RwLock::new(IndexMap::new())),
             path: PathBuf::from("./data"),
-            readers: BufReaderWithPos::new(File::open()),
+            readers: readers,
         })
     }
 
@@ -159,6 +164,12 @@ mod tests {
         st.set(cache_key.clone(), "hello org".as_bytes().into());
         assert_eq!(st.delete(&cache_key), Some("hello org".as_bytes().into()));
         assert_eq!(st.get(&cache_key), None);
+    }
+
+    #[test]
+    fn test_sorted_gen_list() {
+        let res = sorted_gen_list(PathBuf::from("./src/"));
+        dbg!(&res);
     }
 }
 
