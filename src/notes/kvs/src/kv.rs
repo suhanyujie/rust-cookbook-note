@@ -5,6 +5,7 @@
 use super::util::HandyRwLock;
 use crate::{KvsError, Result};
 use indexmap::IndexMap;
+use serde_json::Deserializer;
 use std::{
     collections::{BTreeMap, HashMap},
     ffi::OsStr,
@@ -77,7 +78,28 @@ fn load(
     reader: BufReaderWithPos<File>,
     index: &mut BTreeMap<String, CommandPos>,
 ) -> Result<u64> {
-    todo!()
+    // 确定从文件的某个位置开始读
+    let mut pos = reader.reader.seek(SeekFrom::Start(0))?;
+    let mut stream = Deserializer::from_reader(reader).into_iter::<Command>();
+    let mut uncompacted = 0;
+    while let Some(cmd) = stream.next() {
+        let new_pos = stream.byte_offset() as u64;
+        match cmd?  {
+            Command::Set{key, ..} => {
+                if let Some(old_cmd) = index.insert(key, (gen, pos..new_pos).into()) {
+                    uncompacted += old_cmd.len();
+                }
+            },
+            _ => {todo!()},
+        }
+        pos = new_pos;
+    }
+    Ok(uncompacted)
+}
+
+enum Command {
+    Set { key: String, value: String },
+    Remove { key: String },
 }
 
 /// 命令位置
@@ -100,7 +122,7 @@ impl From<(u64, Range<u64>)> for CommandPos {
 impl KVStore {
     fn new() -> Self {
         // KVStore::from_map(IndexMap::new())
-        KVStore{
+        KVStore {
             path: todo!(),
             readers: todo!(),
             inner: todo!(),
