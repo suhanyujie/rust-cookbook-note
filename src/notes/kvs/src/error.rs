@@ -12,6 +12,9 @@ pub enum KvsError {
     #[fail(display = "key not found")]
     KeyNotFound,
 
+    #[fail(display = "serde json error")]
+    ToJsonErr(#[cause] serde_json::Error),
+
     #[fail(display = "error: {}", reason)]
     CommonErr { reason: String },
 }
@@ -21,5 +24,12 @@ impl From<io::Error> for KvsError {
         KvsError::Io(err)
     }
 }
+
+impl From<serde_json::Error> for KvsError {
+    fn from(err: serde_json::Error) -> Self {
+        KvsError::ToJsonErr(err)
+    }
+}
+
 
 pub type Result<T> = std::result::Result<T, KvsError>;

@@ -5,6 +5,7 @@
 use super::util::HandyRwLock;
 use crate::{KvsError, Result};
 use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
 use serde_json::Deserializer;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -75,7 +76,7 @@ fn log_path(dir: &Path, gen: u64) -> PathBuf {
 /// 通过文件序号，从对应的文件中读取指令并将其加载到内存中（BTreeMap）
 fn load(
     gen: u64,
-    reader: BufReaderWithPos<File>,
+    reader: &mut BufReaderWithPos<File>,
     index: &mut BTreeMap<String, CommandPos>,
 ) -> Result<u64> {
     // 确定从文件的某个位置开始读
@@ -87,7 +88,7 @@ fn load(
         match cmd? {
             Command::Set { key, .. } => {
                 if let Some(old_cmd) = index.insert(key, (gen, pos..new_pos).into()) {
-                    uncompacted += old_cmd.len();
+                    uncompacted += old_cmd.len;
                 }
             }
             _ => {
@@ -99,6 +100,7 @@ fn load(
     Ok(uncompacted)
 }
 
+#[derive(Debug, Deserialize, Serialize)]
 enum Command {
     Set { key: String, value: String },
     Remove { key: String },
@@ -128,7 +130,7 @@ impl<R: Seek + Read> Seek for BufReaderWithPos<R> {
     }
 }
 
-impl <R: Seek + Read> Read for BufReaderWithPos<R> {
+impl<R: Seek + Read> Read for BufReaderWithPos<R> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let len = self.reader.read(&mut buf)?;
         self.pos += len as u64;
