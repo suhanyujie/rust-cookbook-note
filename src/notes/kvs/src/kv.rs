@@ -172,6 +172,7 @@ impl KVStore {
             path: todo!(),
             readers: todo!(),
             inner: todo!(),
+            writer: todo!(),
         }
     }
 
@@ -196,6 +197,7 @@ impl KVStore {
             inner: Arc::new(RwLock::new(IndexMap::new())),
             path: PathBuf::from("./data"),
             readers: readers,
+            writer: todo!(),
         })
     }
 
@@ -238,6 +240,20 @@ mod tests {
     fn test_sorted_gen_list() {
         let res = sorted_gen_list(PathBuf::from("./"));
         dbg!(&res);
+    }
+
+    #[test]
+    fn test_serde() {
+        let data = b"[10] [1] [2]";
+        let de = serde_json::Deserializer::from_slice(data);
+        let mut stream = de.into_iter::<Vec<i32>>();
+        dbg!(stream.byte_offset());// 0
+        dbg!(stream.next()); // Some([10])
+        dbg!(stream.byte_offset());// 4
+        dbg!(stream.next()); // Some([1])
+        dbg!(stream.byte_offset()); // 8
+        dbg!(stream.next()); // Some([2])
+        dbg!(stream.byte_offset());// 12
     }
 }
 
