@@ -11,7 +11,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     ffi::OsStr,
     fs::File,
-    io::{BufReader, Read, Seek, SeekFrom},
+    io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write},
     ops::Range,
     path::{Path, PathBuf},
     sync::{Arc, RwLock},
@@ -32,10 +32,37 @@ struct KVStore {
     /// 对于 CLI，使用 KVStore 类型将加载索引，执行命令，然后退出；对于库使用，它将加载索引，然后执行多个命令，维护索引状态，直到它被删除。
     /// ref: https://github.com/pingcap/talent-plan/blob/master/courses/rust/projects/project-2/README.md#project-spec
     path: PathBuf,
-
+    // 数字到文件的映射
     readers: HashMap<u64, BufReaderWithPos<File>>,
+    // 当前用于写的日志文件
+    writer: BufWriterWithPos<File>,
     inner: Arc<RwLock<IndexMap<Vec<u8>, Vec<u8>>>>,
 }
+
+struct BufWriterWithPos<W: Write + Seek> {
+    writer: BufWriter<W>,
+    pos: u64,
+}
+
+impl<W: Write + Seek> BufWriterWithPos<W> {
+    fn new(mut inner: W) -> Result<Self> {
+        let pos = inner.seek(SeekFrom::Current(0));
+        Ok(BufWriterWithPos {
+            writer: todo!(),
+            pos: 0,
+        })
+    }
+}
+
+// impl<W: Write + Seek> Write for BufReaderWithPos<W> {
+//     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+//         todo!()
+//     }
+
+//     fn flush(&mut self) -> std::io::Result<()> {
+//         todo!()
+//     }
+// }
 
 struct BufReaderWithPos<R: Read + Seek> {
     reader: BufReader<R>,
@@ -132,7 +159,7 @@ impl<R: Seek + Read> Seek for BufReaderWithPos<R> {
 
 impl<R: Seek + Read> Read for BufReaderWithPos<R> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let len = self.reader.read(&mut buf)?;
+        let len = self.reader.read(buf)?;
         self.pos += len as u64;
         Ok(len)
     }
@@ -156,10 +183,10 @@ impl KVStore {
         // 索引以 btree map 的形式存储在内存中
         let mut index: BTreeMap<String, CommandPos> = BTreeMap::new();
         let gen_list = sorted_gen_list(path.clone())?;
-        let uncompacted = 0;
+        let mut uncompacted = 0;
         for &gen in &gen_list {
             let mut reader = BufReaderWithPos::new(File::open(log_path(&path, gen))?)?;
-            uncompacted += load(gen, reader, &mut index)?;
+            uncompacted += load(gen, &mut reader, &mut index)?;
             readers.insert(gen, reader);
         }
 
@@ -209,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_sorted_gen_list() {
-        let res = sorted_gen_list(PathBuf::from("./src/"));
+        let res = sorted_gen_list(PathBuf::from("./"));
         dbg!(&res);
     }
 }
