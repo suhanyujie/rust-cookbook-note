@@ -214,8 +214,26 @@ impl KVStore {
     }
 }
 
+// 读取一个目录下的文件
+fn read_dir(path: &str) -> Result<Vec<String>> {
+    // Rust 实现浏览文件
+    let dirs: Vec<String> = std::fs::read_dir(path)?
+        .flat_map(|res| -> Result<_> { Ok(res?.path()) })
+        .filter(|path| path.is_file())
+        .flat_map(|path| {
+            path.file_name()
+                .and_then(OsStr::to_str)
+                .map(|s| s.to_string())
+        })
+        .collect();
+    dbg!(&dirs);
+    Ok(dirs)
+}
+
 #[cfg(test)]
 mod tests {
+    use std::fmt::Result;
+
     use super::*;
 
     #[test]
@@ -244,16 +262,23 @@ mod tests {
 
     #[test]
     fn test_serde() {
+        // 通过 serde_json 可以实现“流”方式的贪婪匹配对象（反序列化）
         let data = b"[10] [1] [2]";
         let de = serde_json::Deserializer::from_slice(data);
         let mut stream = de.into_iter::<Vec<i32>>();
-        dbg!(stream.byte_offset());// 0
+        dbg!(stream.byte_offset()); // 0
         dbg!(stream.next()); // Some([10])
-        dbg!(stream.byte_offset());// 4
+        dbg!(stream.byte_offset()); // 4
         dbg!(stream.next()); // Some([1])
         dbg!(stream.byte_offset()); // 8
         dbg!(stream.next()); // Some([2])
-        dbg!(stream.byte_offset());// 12
+        dbg!(stream.byte_offset()); // 12
+    }
+
+    #[test]
+    fn test_read_dir() {
+        let res = read_dir("./");
+        dbg!(res);
     }
 }
 
