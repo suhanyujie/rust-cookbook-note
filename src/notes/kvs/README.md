@@ -12,6 +12,7 @@
 
 ## run
 * `cargo run`
+* 运行单测可参考：`cargo test --package kvs --lib -- kv::tests::test_create_dir --exact --nocapture`
 
 ## 参考
 * WAL 介绍 https://www.cnblogs.com/xuwc/p/14037750.html

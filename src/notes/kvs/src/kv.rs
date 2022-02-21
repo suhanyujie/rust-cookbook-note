@@ -230,6 +230,11 @@ fn read_dir(path: &str) -> Result<Vec<String>> {
     Ok(dirs)
 }
 
+fn create_dir(path: &str) ->Result<bool> {
+    let res = std::fs::create_dir_all(path)?;
+    Ok(true)
+}
+
 #[cfg(test)]
 mod tests {
     use std::fmt::Result;
@@ -278,7 +283,14 @@ mod tests {
     #[test]
     fn test_read_dir() {
         let res = read_dir("./");
-        dbg!(res);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_create_dir() {
+        // 执行时，`./` 指的是项目根目录
+        let res = create_dir("./test-dir");
+        assert!(res.is_ok());
     }
 }
 
