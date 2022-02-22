@@ -54,15 +54,17 @@ impl<W: Write + Seek> BufWriterWithPos<W> {
     }
 }
 
-// impl<W: Write + Seek> Write for BufReaderWithPos<W> {
-//     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-//         todo!()
-//     }
+impl<W: Write + Seek> Write for BufWriterWithPos<W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let len = self.writer.write(buf)?;
+        self.pos += len as u64;
+        Ok(len)
+    }
 
-//     fn flush(&mut self) -> std::io::Result<()> {
-//         todo!()
-//     }
-// }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.writer.flush()
+    }
+}
 
 struct BufReaderWithPos<R: Read + Seek> {
     reader: BufReader<R>,
