@@ -39,6 +39,7 @@ struct KVStore {
     inner: Arc<RwLock<IndexMap<Vec<u8>, Vec<u8>>>>,
 }
 
+#[derive(Debug)]
 struct BufWriterWithPos<W: Write + Seek> {
     writer: BufWriter<W>,
     pos: u64,
@@ -48,7 +49,7 @@ impl<W: Write + Seek> BufWriterWithPos<W> {
     fn new(mut inner: W) -> Result<Self> {
         let pos = inner.seek(SeekFrom::Current(0));
         Ok(BufWriterWithPos {
-            writer: todo!(),
+            writer: BufWriter::new(inner),
             pos: 0,
         })
     }
@@ -232,14 +233,32 @@ fn read_dir(path: &str) -> Result<Vec<String>> {
     Ok(dirs)
 }
 
-fn create_dir(path: &str) ->Result<bool> {
+fn create_dir(path: &str) -> Result<bool> {
     let res = std::fs::create_dir_all(path)?;
     Ok(true)
 }
 
+/// 日志文件的创建
+fn new_log_file(
+    path: &Path,
+    gen: u64,
+    readers: &mut HashMap<u64, BufReaderWithPos<File>>,
+) -> Result<BufWriterWithPos<File>> {
+    let path = log_path(&path, gen);
+    let writer = BufWriterWithPos::new(
+        std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(true)
+            .open(&path)?,
+    )?;
+    readers.insert(gen, BufReaderWithPos::new(File::open(&path)?)?);
+    Ok(writer)
+}
+
 #[cfg(test)]
 mod tests {
-    use std::fmt::Result;
+    use std::{fmt::Result, str::FromStr};
 
     use super::*;
 
@@ -293,6 +312,13 @@ mod tests {
         // 执行时，`./` 指的是项目根目录
         let res = create_dir("./test-dir");
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_new_log_file() {
+        let mut hs: HashMap<u64, BufReaderWithPos<File>> = HashMap::new();
+        let res = new_log_file(Path::new("./data"), 0, &mut hs);
+        dbg!(res);
     }
 }
 
