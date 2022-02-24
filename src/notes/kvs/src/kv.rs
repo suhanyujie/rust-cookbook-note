@@ -36,7 +36,11 @@ struct KVStore {
     readers: HashMap<u64, BufReaderWithPos<File>>,
     // 当前用于写的日志文件
     writer: BufWriterWithPos<File>,
-    inner: Arc<RwLock<IndexMap<Vec<u8>, Vec<u8>>>>,
+    // 存在内存中的索引
+    index: BTreeMap<String, CommandPos>,
+    // inner: Arc<RwLock<IndexMap<Vec<u8>, Vec<u8>>>>,
+    /// 记录当前所写入的文件标号
+    current_gen: u64,
 }
 
 #[derive(Debug)]
@@ -136,6 +140,16 @@ enum Command {
     Remove { key: String },
 }
 
+impl Command {
+    fn set(key: String, value: String) -> Self {
+        Command::Set { key, value }
+    }
+
+    fn remove(key: String) -> Self {
+        Command::Remove { key }
+    }
+}
+
 /// 命令位置
 struct CommandPos {
     gen: u64,
@@ -174,8 +188,9 @@ impl KVStore {
         KVStore {
             path: todo!(),
             readers: todo!(),
-            inner: todo!(),
             writer: todo!(),
+            index: todo!(),
+            current_gen: 0,
         }
     }
 
@@ -197,24 +212,47 @@ impl KVStore {
         let current_gen = gen_list.last().unwrap_or(&0) + 1;
 
         Ok(KVStore {
-            inner: Arc::new(RwLock::new(IndexMap::new())),
             path: PathBuf::from("./data"),
             readers: readers,
-            writer: todo!(),
+            writer: BufWriterWithPos::new(
+                std::fs::OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .append(true)
+                    .open(path)?
+            )?,
+            index,
+            current_gen,
         })
     }
 
-    fn set(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>> {
-        self.inner.wl().insert(k, v)
+    /// 设定键值对
+    /// 1.序列化指令，刷入文件中；2.索引写入内存
+    fn set(&mut self, k: String, v: String) -> Result<()> {
+        let cmd = Command::set(k, v);
+        let pos = self.writer.pos;
+        serde_json::to_writer(&mut self.writer, &cmd)?;
+        self.writer.flush()?;
+        // 索引写入内存 todo
+        if let Command::Set { key, .. } = cmd {
+            if let Some(old_cmd) = self
+                .index
+                .insert(key, (self.current_gen, pos..self.writer.pos).into())
+            {
+                // self.uncompacted += old_cmd.len;
+            }
+        }
+
+        Ok(())
     }
 
-    fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
-        self.inner.rl().get(k).map(|v| v.clone())
-    }
+    // fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
+    //     self.inner.rl().get(k).map(|v| v.clone())
+    // }
 
-    fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
-        self.inner.wl().remove(k)
-    }
+    // fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
+    //     self.inner.wl().remove(k)
+    // }
 }
 
 // 读取一个目录下的文件
@@ -263,22 +301,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_store1() {
-        let mut st = KVStore::new();
-        let cache_key: Vec<u8> = "org_1001_info".as_bytes().into();
-        st.set(cache_key.clone(), "hello org".as_bytes().into());
-        assert_eq!(st.get(&cache_key), Some("hello org".as_bytes().into()));
-        // assert!(false);
-    }
+    // fn test_store1() {
+    //     let mut st = KVStore::new();
+    //     let cache_key: Vec<u8> = "org_1001_info".as_bytes().into();
+    //     st.set(cache_key.clone(), "hello org".as_bytes().into());
+    //     assert_eq!(st.get(&cache_key), Some("hello org".as_bytes().into()));
+    // }
 
     #[test]
-    fn test_store_delete() {
-        let mut st = KVStore::new();
-        let cache_key: Vec<u8> = "org_1001_info".as_bytes().into();
-        st.set(cache_key.clone(), "hello org".as_bytes().into());
-        assert_eq!(st.delete(&cache_key), Some("hello org".as_bytes().into()));
-        assert_eq!(st.get(&cache_key), None);
-    }
+    // fn test_store_delete() {
+    //     let mut st = KVStore::new();
+    //     let cache_key: Vec<u8> = "org_1001_info".as_bytes().into();
+    //     st.set(cache_key.clone(), "hello org".as_bytes().into());
+    //     assert_eq!(st.delete(&cache_key), Some("hello org".as_bytes().into()));
+    //     assert_eq!(st.get(&cache_key), None);
+    // }
 
     #[test]
     fn test_sorted_gen_list() {
