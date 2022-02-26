@@ -41,6 +41,8 @@ struct KVStore {
     // inner: Arc<RwLock<IndexMap<Vec<u8>, Vec<u8>>>>,
     /// 记录当前所写入的文件标号
     current_gen: u64,
+    /// 记录过期/无效的（可被删除的）值的字节数量
+    uncompacted: u64,
 }
 
 #[derive(Debug)]
@@ -151,6 +153,7 @@ impl Command {
 }
 
 /// 命令位置
+#[derive(Debug)]
 struct CommandPos {
     gen: u64,
     pos: u64,
@@ -191,6 +194,7 @@ impl KVStore {
             writer: todo!(),
             index: todo!(),
             current_gen: 0,
+            uncompacted: todo!(),
         }
     }
 
@@ -219,10 +223,11 @@ impl KVStore {
                     .create(true)
                     .write(true)
                     .append(true)
-                    .open(path)?
+                    .open(path)?,
             )?,
             index,
             current_gen,
+            uncompacted,
         })
     }
 
@@ -239,20 +244,48 @@ impl KVStore {
                 .index
                 .insert(key, (self.current_gen, pos..self.writer.pos).into())
             {
-                // self.uncompacted += old_cmd.len;
+                self.uncompacted += old_cmd.len;
             }
         }
 
         Ok(())
     }
 
-    // fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
-    //     self.inner.rl().get(k).map(|v| v.clone())
-    // }
+    /// 读取值
+    /// 如果key存在则返回值，不存在，返回 None
+    fn get(&mut self, k: String) -> Result<Option<String>> {
+        if let Some(cmd_pos) = self.index.get(&k) {
+            let reader = self
+                .readers
+                .get_mut(&cmd_pos.gen)
+                .expect("Cannot find log reader");
+            reader.seek(SeekFrom::Start(cmd_pos.pos))?;
+            let cmd_reader = reader.take(cmd_pos.len);
+            if let Command::Set { value, .. } = serde_json::from_reader(cmd_reader)? {
+                Ok(Some(value))
+            } else {
+                Err(KvsError::UnsupportCmdType)
+            }
+        } else {
+            Ok(None)
+        }
+    }
 
-    // fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
-    //     self.inner.wl().remove(k)
-    // }
+    /// 查询 key 是否存在，如果存在，则记录 cmd 到日志，然后删除文件中的数据，再索引索引
+    fn delete(&mut self, k: String) -> Result<()> {
+        if self.index.contains_key(&k) {
+            let rm_cmd = Command::remove(k.clone());
+            serde_json::to_writer(&mut self.writer, &rm_cmd)?;
+            self.writer.flush()?;
+            if let Command::Remove { key } = rm_cmd {
+                let old_cmd = self.index.remove(&key).expect("rm key error.");
+                self.uncompacted += old_cmd.len;
+            }
+            Ok(())
+        } else {
+            Err(KvsError::KeyNotFound)
+        }
+    }
 }
 
 // 读取一个目录下的文件
@@ -272,7 +305,7 @@ fn read_dir(path: &str) -> Result<Vec<String>> {
 }
 
 fn create_dir(path: &str) -> Result<bool> {
-    let res = std::fs::create_dir_all(path)?;
+    std::fs::create_dir_all(path)?;
     Ok(true)
 }
 
@@ -307,7 +340,6 @@ mod tests {
     //     st.set(cache_key.clone(), "hello org".as_bytes().into());
     //     assert_eq!(st.get(&cache_key), Some("hello org".as_bytes().into()));
     // }
-
     #[test]
     // fn test_store_delete() {
     //     let mut st = KVStore::new();
@@ -316,7 +348,6 @@ mod tests {
     //     assert_eq!(st.delete(&cache_key), Some("hello org".as_bytes().into()));
     //     assert_eq!(st.get(&cache_key), None);
     // }
-
     #[test]
     fn test_sorted_gen_list() {
         let res = sorted_gen_list(PathBuf::from("./"));
@@ -356,6 +387,13 @@ mod tests {
         let mut hs: HashMap<u64, BufReaderWithPos<File>> = HashMap::new();
         let res = new_log_file(Path::new("./data"), 0, &mut hs);
         dbg!(res);
+    }
+
+    #[test]
+    fn test_command_pos() {
+        // Into trait 的使用和了解
+        let c1: CommandPos = (1, 2..17).into();
+        dbg!(c1);
     }
 }
 

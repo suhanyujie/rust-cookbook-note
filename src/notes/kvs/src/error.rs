@@ -15,6 +15,10 @@ pub enum KvsError {
     #[fail(display = "serde json error")]
     ToJsonErr(#[cause] serde_json::Error),
 
+    /// 不支持的指令操作类型
+    #[fail(display = "Not support command type")]
+    UnsupportCmdType,
+
     #[fail(display = "error: {}", reason)]
     CommonErr { reason: String },
 }
