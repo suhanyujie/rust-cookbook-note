@@ -109,7 +109,7 @@ fn log_path(dir: &Path, gen: u64) -> PathBuf {
     dir.join(format!("{}.log", gen))
 }
 
-/// 通过文件序号，从对应的文件中读取指令并将其加载到内存中（BTreeMap）
+/// 通过文件序号，从对应的文件中读取指令并生成对应的索引加载到内存中（BTreeMap）
 fn load(
     gen: u64,
     reader: &mut BufReaderWithPos<File>,
@@ -118,8 +118,10 @@ fn load(
     // 确定从文件的某个位置开始读
     let mut pos = reader.seek(SeekFrom::Start(0))?;
     let mut stream = Deserializer::from_reader(reader).into_iter::<Command>();
+    // 通过压缩的手段可节省的字节数
     let mut uncompacted = 0;
     while let Some(cmd) = stream.next() {
+        // 匹配到下一条指令所对应的 offset
         let new_pos = stream.byte_offset() as u64;
         match cmd? {
             Command::Set { key, .. } => {
@@ -127,8 +129,13 @@ fn load(
                     uncompacted += old_cmd.len;
                 }
             }
-            _ => {
-                todo!()
+            // 删除
+            Command::Remove { key } => {
+                if let Some(old_cmd) = index.remove(&key) {
+                    uncompacted += old_cmd.len;
+                }
+                // 为何加上了指令的长度？todo
+                uncompacted += new_pos - pos;
             }
         }
         pos = new_pos;
@@ -198,10 +205,12 @@ impl KVStore {
         }
     }
 
+    /// 基于一个路径启动一个 KvStore 实例。
+    /// 如果路径不存在，则创建
     fn open(path: impl Into<PathBuf>) -> Result<Self> {
         // 打开目录，查看目录中的日志文件列表，将其加载进 kvs
         let path = path.into();
-        std::fs::create_dir_all(&path);
+        std::fs::create_dir_all(&path)?;
         let mut readers = HashMap::new();
         // 索引以 btree map 的形式存储在内存中
         let mut index: BTreeMap<String, CommandPos> = BTreeMap::new();
