@@ -7,8 +7,6 @@ use std::path::{Path, PathBuf};
 
 const SNAP_EXT: &'static str = "snap";
 
-pub type Result<T> = std::result::Result<T, std::io::Error>;
-
 pub struct Snapshotter {
     dir: PathBuf,
 }
@@ -20,7 +18,7 @@ impl Snapshotter {
         }
     }
 
-    pub fn save(&self, snapshot: &RaftSnapshot) -> Result<()> {
+    pub fn save(&self, snapshot: &RaftSnapshot) -> crate::Result<()> {
         let md = snapshot.metadata.get_ref();
         let spath = self.new_snap_path(md.index, md.term);
         let b = snapshot.write_to_bytes()?;

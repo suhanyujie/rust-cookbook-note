@@ -15,6 +15,9 @@ pub enum KvsError {
     #[fail(display = "serde json error")]
     ToJsonErr(#[cause] serde_json::Error),
 
+    #[fail(display = "proto error")]
+    ProtoErr(#[cause] protobuf::ProtobufError),
+
     /// 不支持的指令操作类型
     #[fail(display = "Not support command type")]
     UnsupportCmdType,
@@ -35,5 +38,10 @@ impl From<serde_json::Error> for KvsError {
     }
 }
 
+impl From<protobuf::ProtobufError> for KvsError {
+    fn from(err: protobuf::ProtobufError) -> Self {
+        KvsError::ProtoErr(err)
+    }
+}
 
 pub type Result<T> = std::result::Result<T, KvsError>;
