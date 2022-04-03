@@ -149,6 +149,7 @@ enum Command {
     Remove { key: String },
 }
 
+/// 定义支持的指令/日志
 impl Command {
     fn set(key: String, value: String) -> Self {
         Command::Set { key, value }
@@ -162,8 +163,11 @@ impl Command {
 /// 命令位置
 #[derive(Debug)]
 struct CommandPos {
+    /// 日志文件序号
     gen: u64,
+    /// 日志在一个文件中的偏移量
     pos: u64,
+    /// 日志的长度。一个指令就算是一条日志
     len: u64,
 }
 
