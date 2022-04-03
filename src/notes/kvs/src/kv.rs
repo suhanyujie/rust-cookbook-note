@@ -193,47 +193,30 @@ impl<R: Seek + Read> Read for BufReaderWithPos<R> {
 }
 
 impl KVStore {
-    fn new() -> Self {
-        // KVStore::from_map(IndexMap::new())
-        KVStore {
-            path: todo!(),
-            readers: todo!(),
-            writer: todo!(),
-            index: todo!(),
-            current_gen: 0,
-            uncompacted: todo!(),
-        }
-    }
-
     /// 基于一个路径启动一个 KvStore 实例。
     /// 如果路径不存在，则创建
     fn open(path: impl Into<PathBuf>) -> Result<Self> {
         // 打开目录，查看目录中的日志文件列表，将其加载进 kvs
-        let path = path.into();
-        std::fs::create_dir_all(&path)?;
+        let using_path = path.into();
+        std::fs::create_dir_all(&using_path)?;
         let mut readers = HashMap::new();
         // 索引以 btree map 的形式存储在内存中
         let mut index: BTreeMap<String, CommandPos> = BTreeMap::new();
-        let gen_list = sorted_gen_list(path.clone())?;
+        let gen_list = sorted_gen_list(using_path.clone())?;
         let mut uncompacted = 0;
         for &gen in &gen_list {
-            let mut reader = BufReaderWithPos::new(File::open(log_path(&path, gen))?)?;
+            let mut reader = BufReaderWithPos::new(File::open(log_path(&using_path, gen))?)?;
             uncompacted += load(gen, &mut reader, &mut index)?;
             readers.insert(gen, reader);
         }
 
         let current_gen = gen_list.last().unwrap_or(&0) + 1;
-
+        let writer = new_log_file(&using_path, current_gen, &mut readers)?;
+        
         Ok(KVStore {
-            path: PathBuf::from("./data"),
-            readers: readers,
-            writer: BufWriterWithPos::new(
-                std::fs::OpenOptions::new()
-                    .create(true)
-                    .write(true)
-                    .append(true)
-                    .open(path)?,
-            )?,
+            path: using_path.clone(),
+            readers,
+            writer,
             index,
             current_gen,
             uncompacted,
@@ -387,12 +370,20 @@ mod tests {
     use super::*;
 
     #[test]
-    // fn test_store1() {
-    //     let mut st = KVStore::new();
-    //     let cache_key: Vec<u8> = "org_1001_info".as_bytes().into();
-    //     st.set(cache_key.clone(), "hello org".as_bytes().into());
-    //     assert_eq!(st.get(&cache_key), Some("hello org".as_bytes().into()));
-    // }
+    fn test_store1() {
+        let mut st = KVStore::open("./data").expect("kvstore init error.");
+        let cache_key: String = "org_1001_info".into();
+        st.set(cache_key.clone(), "hello org".to_string());
+        assert_eq!(st.get(cache_key.to_string()).unwrap(), Some("hello org".to_string()));
+    }
+
+    #[test]
+    fn test_load1() {
+        let mut st = KVStore::open("./data").expect("kvstore init error.");
+        let cache_key: String = "org_1001_info".to_string();
+        dbg!(st.get(cache_key.to_string()).unwrap());
+    }
+
     #[test]
     // fn test_store_delete() {
     //     let mut st = KVStore::new();
@@ -401,6 +392,7 @@ mod tests {
     //     assert_eq!(st.delete(&cache_key), Some("hello org".as_bytes().into()));
     //     assert_eq!(st.get(&cache_key), None);
     // }
+
     #[test]
     fn test_sorted_gen_list() {
         let res = sorted_gen_list(PathBuf::from("./"));
