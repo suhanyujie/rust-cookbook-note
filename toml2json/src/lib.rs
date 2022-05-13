@@ -1,7 +1,6 @@
-use std::{error::Error};
+use std::error::Error;
 
-
-fn toml2json() -> Result<String, Error>{
+fn toml2json() -> Result<String, Box<dyn Error>> {
     Ok("".to_string())
 }
 
