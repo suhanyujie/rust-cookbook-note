@@ -91,7 +91,7 @@ let arg_port = Arg::new("port")
 参数的匹配独立到 app 函数中，有利于后期的管理和维护，如果要增加或更新，直接修改 app 函数即可。
 
 #### 参数的解析
-参数解析位于 src/cli/args.rs 文件，命令行参数虽然是看似零乱的标记，但通过匹配拿到后，可以将其放在一个特定的结构中，sfz 就是如此：
+参数解析位于 `src/cli/args.rs` 文件，命令行参数虽然是看似零乱的标记，但通过匹配拿到后，可以将其放在一个特定的结构中，sfz 就是如此：
 
 ```rust
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -111,6 +111,56 @@ pub struct Args {
     pub path_prefix: Option<String>,
 }
 ```
+
+定义好参数之后，就为它实现对应的方法，一般来说，有了结构体之后，需要定义个实例化它的 `new` 方法，在这里却不是取而代之的是 `parse` 方法:
+
+```rust
+pub fn parse(matches: ArgMatches) -> BoxResult<Args> {
+    let address = matches.value_of("address").unwrap_or_default().to_owned();
+    let port = matches.value_of_t::<u16>("port")?;
+    let cache = matches.value_of_t::<u64>("cache")?;
+    let cors = matches.is_present("cors");
+    let coi = matches.is_present("coi");
+    // ...
+
+    Ok(Args {
+        address,
+        port,
+        cache,
+        cors,
+        coi,
+        // ...
+    })
+}
+```
+
+其实 parse 在这里就是实例化的方法，只是 Rust 中，没有确定的构造函数名，而是把选择权交给开发者。值的注意的是 parse 的入参类型是 `ArgMatches`，这恰好是在 app mod 中声明 app 后，拿到的参数模式或者称之为**参数模型**。
+
+有了参数模型，就能按照实际需要进行参数匹配：
+
+```rust
+let address = matches.value_of("address").unwrap_or_default().to_owned();
+```
+
+matches 来自于哪儿？它其实是从命令行中拿到用户的输入后，匹配后的结果，具体实现被定义在 [clap](https://docs.rs/clap/3.1.18/clap/struct.App.html#method.get_matches) 中：
+
+```rust
+// 来自于 sfz app mod
+pub fn matches() -> ArgMatches {
+    app().get_matches()
+}
+
+// 来自于 clap
+#[inline]
+pub fn get_matches(self) -> ArgMatches {
+    self.get_matches_from(&mut env::args_os())
+}
+```
+
+可以看到，直接通过标准库的方法 [`env::args_os()`](https://doc.rust-lang.org/std/env/fn.args_os.html) 获取命令行参数。
+
+完成实例化 Args 后，接下来就是使用它的时候了，main 中直接将其丢给 serve 函数（位于 src/server/serve.rs）处理。
+
 
 -- todo
 
