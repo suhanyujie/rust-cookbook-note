@@ -16,7 +16,8 @@ chrono = "0.4.13"
 [workspace]
 members = [
     "cookbooktest",
-    "toml2json"
+    "toml2json",
+    "src/notes/static-server"
 ]
 
 exclude = [

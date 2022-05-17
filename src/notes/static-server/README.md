@@ -186,6 +186,9 @@ fn handle_err<T>(err: Box<dyn std::error::Error>) -> T {
 
 -- todo
 
+## 开发
+* 根据 [actix-web](https://actix.rs/docs/autoreload/) 使用 cargo watch 可以自动热加载：`cargo watch -x "run"`
 
 ## 参考
 * https://github.com/weihanglo/sfz
+* hyper 仓库 https://github.com/hyperium/hyper
