@@ -16,6 +16,52 @@
 
 比如，通过 `localhost:3001/mydir1` 查询路径下的文件列表，其实就是查询 `./someDir/mydir1` 下的文件列表。
 
-所以在请求到来时，我们需要将获取到的 `/mydir1` 参数值拼接上 basePath —— `./someDir`
+所以在请求到来时，我们需要将获取到的 `/mydir1` 参数值拼接上 basePath —— `./someDir`，得到 `./someDir/mydir1` 的路径，进而获取该路径下的文件列表（前提是该路径是合法的目录）。send_dir() 就是获取文件列表的实现：
 
-    
+```rust
+/// Send a HTML page of all files under the path.
+///
+/// # Parameters
+///
+/// * `dir_path` - Directory to be listed files.
+/// * `base_path` - The base path resolving all filepaths under `dir_path`.
+/// * `show_all` - Whether to show hidden and 'dot' files.
+/// * `with_ignore` - Whether to respet gitignore files.
+/// * `path_prefix` - The url path prefix optionally defined
+pub fn send_dir<P1: AsRef<Path>, P2: AsRef<Path>>(
+    dir_path: P1,
+    base_path: P2,
+    show_all: bool,
+    with_ignore: bool,
+    path_prefix: Option<&str>,
+) -> io::Result<Vec<u8>> {
+    // ...
+}
+```
+
+可是 `./someDir/mydir1` 是相对路径，我们需要将其转换为更加可读的路径，除此之外，我们还要防止非法的输入，比如 `./../../../user/somePath`。sfz 的做法如下：
+
+```rust
+/// Parse path.
+fn parse_path<P: AsRef<Path>>(path: P) -> BoxResult<PathBuf> {
+    let path = path.as_ref();
+    if !path.exists() {
+        bail!("error: path \"{}\" doesn't exist", path.display());
+    }
+
+    env::current_dir()
+        .and_then(|mut p| {
+            p.push(path); // If path is absolute, it replaces the current path.
+            canonicalize(p)
+        })
+        .or_else(|err| {
+            bail!(
+                "error: failed to access path \"{}\": {}",
+                path.display(),
+                err,
+            )
+        })
+}
+```
+
+通过 `env::current_dir()` 获取到当前路径下的绝对路径，再拼接上用户输入的局部路径，得到一个完整的路径。
