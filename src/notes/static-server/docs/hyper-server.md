@@ -64,4 +64,23 @@ fn parse_path<P: AsRef<Path>>(path: P) -> BoxResult<PathBuf> {
 }
 ```
 
-通过 `env::current_dir()` 获取到当前路径下的绝对路径，再拼接上用户输入的局部路径，得到一个完整的路径。
+通过 `env::current_dir()` 获取到当前路径下的绝对路径，再拼接上用户输入的局部路径，然后进行一次路径转换 —— `canonicalize()`，得到一个完整的路径。
+
+根据这个路径，读取其下面的文件和目录。sfz 作者使用了[另一个 crate](https://crates.io/crates/ignore) 可以方便地按照 gitignore 规范，读取目录下的文件：
+
+```rust
+/// Walking inside a directory recursively
+fn get_dir_contents<P: AsRef<Path>>(
+    dir_path: P,
+    with_ignore: bool,
+    show_all: bool,
+    depth: Option<usize>,
+) -> ignore::Walk {
+    WalkBuilder::new(dir_path)
+        .standard_filters(false) // Disable all standard filters.
+        .git_ignore(with_ignore)
+        .hidden(!show_all) // Filter out hidden entries on demand.
+        .max_depth(depth) // Do not traverse subpaths.
+        .build()
+}
+```
