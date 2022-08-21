@@ -1,9 +1,10 @@
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use ignore::WalkBuilder;
-use std::convert::Infallible;
+use std::convert::{AsRef, Infallible};
 use std::env;
-use std::fs::canonicalize;
+use std::fs::{canonicalize, File};
+use std::io::{self, BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 pub type BoxResult<T> = Result<T, Box<dyn std::error::Error>>;
@@ -42,13 +43,24 @@ fn get_dir_contents<P: AsRef<Path>>(
         .build()
 }
 
-// fn walk_dir<P: AsRef<Path>>(dir_path: P) {
-//     get_dir_contents(dir_path)
-//         .filter(|entry| entry.ok())
-//         .map(|entry| {
-//             // todo something
-//         })
+// impl PartialEq for AsRef<Path> {
+//     fn eq(&self, other: &Self) -> bool {
+//         self == other.as_ref()
+//     }
 // }
+
+fn walk_dir<P1: AsRef<Path>, P2: AsRef<Path>>(dir_path: P1, base_path: P2) {
+    let base_path = base_path.as_ref();
+    let iter = get_dir_contents(dir_path, false, true, Some(3))
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| dir_path != entry.path())
+        .map(|entry| {
+            let abs_path = entry.path();
+            let rel_path = abs_path.strip_prefix(base_path).unwrap();
+            rel_path.file_name().to_owned()
+        });
+    dbg!(iter);
+}
 
 fn parse_path<P: AsRef<Path>>(path: P) -> BoxResult<PathBuf> {
     let path = path.as_ref();

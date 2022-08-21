@@ -84,3 +84,15 @@ fn get_dir_contents<P: AsRef<Path>>(
         .build()
 }
 ```
+
+_事实上，看到 WalkBuilder 的定义以及对应接口的封装，我又想写一篇分析 [ignore](https://crates.io/crates/ignore) 的学习笔记了，但它时另外一个故事了，写完这篇再考虑它_
+
+简而言之，通过实例化 WalkBuilder 并做一些参数设置后，我们可以对某个目录下的项进行遍历和过滤。
+
+```rust
+let files_iter = get_dir_contents(dir_path, with_ignore, show_all, None)
+    .filter_map(|entry| entry.ok())
+    .filter(|entry| entry.path() != dir_path);
+```
+
+
